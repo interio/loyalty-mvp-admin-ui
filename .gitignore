@@ -1,0 +1,20 @@
+# Node / React
+node_modules
+.npm
+.pnpm-store
+dist
+build
+.turbo
+.next
+coverage
+
+# Env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS / editor
+.DS_Store
+*.log
