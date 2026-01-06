@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLazyQuery, useQuery } from "@apollo/client";
 import {
   Alert,
@@ -27,7 +27,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
-import { CUSTOMERS_BY_TENANT_QUERY } from "./queries";
+import { CUSTOMERS_BY_TENANT_QUERY, CUSTOMERS_BY_TENANT_SEARCH_QUERY } from "./queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
 import { useTenant } from "../tenants/TenantContext";
 
@@ -51,25 +51,45 @@ export const CustomersView: React.FC = () => {
   const [usersCache, setUsersCache] = useState<Record<string, any[]>>({});
   const [loadingUsersFor, setLoadingUsersFor] = useState<string | null>(null);
 
-  const { data, loading, error } = useQuery(CUSTOMERS_BY_TENANT_QUERY, {
+  const { data, loading, error, refetch } = useQuery(CUSTOMERS_BY_TENANT_QUERY, {
     variables: { tenantId: selectedTenantId ?? "" },
     skip: !selectedTenantId,
   });
   const [loadUsers] = useLazyQuery(USERS_BY_CUSTOMER_QUERY);
+  const [searchCustomers, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
+    CUSTOMERS_BY_TENANT_SEARCH_QUERY,
+  );
 
   const customers: Customer[] = data?.customersByTenant ?? [];
+  const searchedCustomers: Customer[] = searchData?.customersByTenantSearch ?? [];
   const selectedTenantName = useMemo(
     () => tenants.find((t) => t.id === selectedTenantId)?.name,
     [tenants, selectedTenantId],
   );
 
-  const filteredCustomers = useMemo(() => {
-    if (!search.trim()) return customers;
-    const term = search.trim().toLowerCase();
-    return customers.filter((c) =>
-      [c.name, c.contactEmail, c.externalId, c.id].some((field) => field?.toLowerCase().includes(term)),
-    );
-  }, [customers, search]);
+  const activeCustomers = search.trim() ? searchedCustomers : customers;
+  const activeError = search.trim() ? searchError : error;
+  const activeLoading = search.trim() ? searching : loading;
+
+  useEffect(() => {
+    setExpandedCustomerId(null);
+  }, [selectedTenantId]);
+
+  useEffect(() => {
+    const term = search.trim();
+    if (!selectedTenantId) return;
+    if (!term) return;
+    const handle = setTimeout(() => {
+      searchCustomers({ variables: { tenantId: selectedTenantId, search: term } });
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [search, selectedTenantId, searchCustomers]);
+
+  useEffect(() => {
+    if (selectedTenantId && !search.trim()) {
+      refetch({ tenantId: selectedTenantId });
+    }
+  }, [selectedTenantId, search, refetch]);
 
   const handleExpand = async (customerId: string) => {
     const isOpen = expandedCustomerId === customerId;
@@ -122,8 +142,8 @@ export const CustomersView: React.FC = () => {
               Choose a tenant to see its customers.
             </Typography>
           )}
-          {error && <Alert severity="error">{error.message}</Alert>}
-          {loading && <LinearProgress />}
+          {activeError && <Alert severity="error">{activeError.message}</Alert>}
+          {activeLoading && <LinearProgress />}
           <TableContainer>
             <Table>
               <TableHead>
@@ -137,7 +157,7 @@ export const CustomersView: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredCustomers.map((customer) => {
+                {activeCustomers.map((customer) => {
                   const isExpanded = expandedCustomerId === customer.id;
                   const users = usersCache[customer.id];
                   return (
@@ -213,7 +233,7 @@ export const CustomersView: React.FC = () => {
                     </React.Fragment>
                   );
                 })}
-                {selectedTenantId && !loading && filteredCustomers.length === 0 && (
+                {selectedTenantId && !activeLoading && activeCustomers.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6}>
                       <Typography variant="body2" color="text.secondary">
