@@ -1,65 +1,206 @@
-import React, { useState } from "react";
-import { useQuery } from "@apollo/client";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLazyQuery, useQuery } from "@apollo/client";
 import {
   Alert,
+  Box,
   Card,
   CardContent,
   CardHeader,
-  Grid,
+  Collapse,
+  IconButton,
+  InputAdornment,
+  LinearProgress,
   List,
   ListItem,
   ListItemText,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
-import { USERS_BY_CUSTOMER_QUERY } from "./queries";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import SearchIcon from "@mui/icons-material/Search";
+import { USERS_BY_TENANT_QUERY, USERS_BY_TENANT_SEARCH_QUERY } from "./queries";
+import { useTenant } from "../tenants/TenantContext";
+
+type User = {
+  id: string;
+  email: string;
+  role?: string;
+  customerId: string;
+  tenantId: string;
+  externalId?: string | null;
+  createdAt?: string;
+  customer?: { id: string; name: string };
+};
 
 export const UsersView: React.FC = () => {
-  const [customerId, setCustomerId] = useState("");
-  const { data, loading, error } = useQuery(USERS_BY_CUSTOMER_QUERY, {
-    variables: { customerId },
-    skip: !customerId,
+  const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
+  const [search, setSearch] = useState("");
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+
+  const { data, loading, error, refetch } = useQuery(USERS_BY_TENANT_QUERY, {
+    variables: { tenantId: selectedTenantId ?? "" },
+    skip: !selectedTenantId,
   });
-  const users = data?.usersByCustomer ?? [];
+  const [searchUsers, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
+    USERS_BY_TENANT_SEARCH_QUERY,
+  );
+
+  const users: User[] = data?.usersByTenant ?? [];
+  const searchedUsers: User[] = searchData?.usersByTenantSearch ?? [];
+
+  const activeUsers = search.trim() ? searchedUsers : users;
+  const activeError = search.trim() ? searchError : error;
+  const activeLoading = search.trim() ? searching : loading;
+
+  const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
+
+  useEffect(() => {
+    setExpandedUserId(null);
+  }, [selectedTenantId]);
+
+  useEffect(() => {
+    const term = search.trim();
+    if (!selectedTenantId) return;
+    if (!term) return;
+    const handle = setTimeout(() => {
+      searchUsers({ variables: { tenantId: selectedTenantId, search: term } });
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [search, selectedTenantId, searchUsers]);
+
+  useEffect(() => {
+    if (selectedTenantId && !search.trim()) {
+      refetch({ tenantId: selectedTenantId });
+    }
+  }, [selectedTenantId, search, refetch]);
+
+  const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "—");
 
   return (
-    <Grid container spacing={2}>
-      <Grid item xs={12} md={4}>
-        <Card>
-          <CardHeader title="Load users" />
-          <CardContent>
-            <Stack spacing={2}>
-              <TextField
-                label="Customer ID"
-                value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
-                helperText="Enter customer ID to list users."
-              />
-              <Typography variant="body2" color="text.secondary">
-                Read-only for now. Update mutations are not exposed in the backend yet.
-              </Typography>
-            </Stack>
-          </CardContent>
-        </Card>
-      </Grid>
-      <Grid item xs={12} md={8}>
-        <Card>
-          <CardHeader title="Users" />
-          <CardContent>
-            {!customerId && <Typography>Enter a customer ID to load users.</Typography>}
-            {loading && <Typography>Loading...</Typography>}
-            {error && <Alert severity="error">{error.message}</Alert>}
-            <List dense>
-              {users.map((u: any) => (
-                <ListItem key={u.id} divider>
-                  <ListItemText primary={u.email} secondary={`id: ${u.id} • role: ${u.role ?? "-"}`} />
-                </ListItem>
-              ))}
-            </List>
-          </CardContent>
-        </Card>
-      </Grid>
-    </Grid>
+    <Card>
+      <CardHeader
+        title="Users"
+        subheader={
+          tenantName ? `Viewing users for ${tenantName}` : "Select a tenant from the header to load users."
+        }
+      />
+      <CardContent>
+        <Stack spacing={2}>
+          <TextField
+            placeholder="Search users by email, role, or external ID"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            disabled={!selectedTenantId}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          {!selectedTenantId && !tenantsLoading && (
+            <Typography variant="body2" color="text.secondary">
+              Choose a tenant to see its users.
+            </Typography>
+          )}
+          {activeError && <Alert severity="error">{activeError.message}</Alert>}
+          {activeLoading && <LinearProgress />}
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell />
+                  <TableCell>Email</TableCell>
+                  <TableCell>Role</TableCell>
+                  <TableCell>Customer</TableCell>
+                  <TableCell>External ID</TableCell>
+                  <TableCell>Created</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {activeUsers.map((user) => {
+                  const isExpanded = expandedUserId === user.id;
+                  return (
+                    <React.Fragment key={user.id}>
+                      <TableRow hover>
+                        <TableCell>
+                          <IconButton size="small" onClick={() => setExpandedUserId(isExpanded ? null : user.id)}>
+                            {isExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                          </IconButton>
+                        </TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{user.role ?? "—"}</TableCell>
+                        <TableCell>
+                          {user.customer?.name ?? "—"}
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            {user.customerId}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{user.externalId ?? "—"}</TableCell>
+                        <TableCell>{formatDate(user.createdAt)}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
+                          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                            <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
+                              <Typography variant="subtitle2" gutterBottom>
+                                User details
+                              </Typography>
+                              <List dense>
+                                <ListItem>
+                                  <ListItemText primary="User ID" secondary={user.id} />
+                                </ListItem>
+                                <ListItem>
+                                  <ListItemText primary="Tenant ID" secondary={user.tenantId} />
+                                </ListItem>
+                                <ListItem>
+                                  <ListItemText
+                                    primary="Customer"
+                                    secondary={
+                                      user.customer?.name ? `${user.customer.name} (${user.customerId})` : user.customerId
+                                    }
+                                  />
+                                </ListItem>
+                                <ListItem>
+                                  <ListItemText primary="External ID" secondary={user.externalId ?? "—"} />
+                                </ListItem>
+                                <ListItem>
+                                  <ListItemText primary="Role" secondary={user.role ?? "—"} />
+                                </ListItem>
+                                <ListItem>
+                                  <ListItemText primary="Created" secondary={formatDate(user.createdAt)} />
+                                </ListItem>
+                              </List>
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  );
+                })}
+                {selectedTenantId && !activeLoading && activeUsers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        No users match this search.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 };
