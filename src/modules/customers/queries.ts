@@ -8,6 +8,11 @@ export const CUSTOMERS_BY_TENANT_QUERY = gql`
       externalId
       contactEmail
       tenantId
+      createdAt
+      pointsAccount {
+        balance
+        updatedAt
+      }
     }
   }
 `;

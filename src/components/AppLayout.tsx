@@ -23,7 +23,11 @@ import RuleIcon from "@mui/icons-material/Rule";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BusinessIcon from "@mui/icons-material/Business";
 import Button from "@mui/material/Button";
+import FormControl from "@mui/material/FormControl";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
 import { useAuth } from "../auth/AuthContext";
+import { TenantProvider, useTenant } from "../modules/tenants/TenantContext";
 
 const drawerWidth = 240;
 
@@ -36,9 +40,16 @@ const navItems = [
   { label: "Invoices", path: "/invoices", icon: <ReceiptLongIcon /> },
 ];
 
-export const AppLayout: React.FC = () => {
+export const AppLayout: React.FC = () => (
+  <TenantProvider>
+    <AppLayoutContent />
+  </TenantProvider>
+);
+
+const AppLayoutContent: React.FC = () => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const { user, logout } = useAuth();
+  const { tenants, selectedTenantId, setSelectedTenantId, loading: tenantsLoading } = useTenant();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -99,21 +110,63 @@ export const AppLayout: React.FC = () => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Loyalty Admin
           </Typography>
-          {user && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <Typography variant="body2">{user.email}</Typography>
-              <Button
-                variant="outlined"
-                color="inherit"
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <FormControl
+              size="small"
+              variant="outlined"
+              sx={{
+                minWidth: 200,
+                "& .MuiInputBase-root": {
+                  color: "#fff",
+                  borderColor: "rgba(255,255,255,0.6)",
+                },
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255,255,255,0.6)",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#fff",
+                },
+                "& .MuiSvgIcon-root": { color: "#fff" },
+              }}
+            >
+              <Select
+                value={selectedTenantId ?? ""}
+                onChange={(e) => setSelectedTenantId(String(e.target.value))}
+                displayEmpty
+                disabled={tenantsLoading || tenants.length === 0}
+                renderValue={(value) => {
+                  if (!value) return "Select tenant";
+                  const tenant = tenants.find((t) => t.id === value);
+                  return tenant ? tenant.name : "Select tenant";
+                }}
                 size="small"
-                startIcon={<LogoutIcon />}
-                onClick={handleLogout}
-                sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.7)" }}
               >
-                Logout
-              </Button>
-            </Box>
-          )}
+                <MenuItem disabled value="">
+                  {tenantsLoading ? "Loading tenants..." : "Select tenant"}
+                </MenuItem>
+                {tenants.map((tenant) => (
+                  <MenuItem key={tenant.id} value={tenant.id}>
+                    {tenant.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            {user && (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <Typography variant="body2">{user.email}</Typography>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                  startIcon={<LogoutIcon />}
+                  onClick={handleLogout}
+                  sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.7)" }}
+                >
+                  Logout
+                </Button>
+              </Box>
+            )}
+          </Box>
         </Toolbar>
       </AppBar>
 
