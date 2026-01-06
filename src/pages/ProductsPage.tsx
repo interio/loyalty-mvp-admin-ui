@@ -1,6 +1,4 @@
 import React from "react";
-import { PlaceholderPage } from "./PlaceholderPage";
+import { ProductsView } from "../modules/products/ProductsView";
 
-export const ProductsPage: React.FC = () => (
-  <PlaceholderPage title="Products" description="Products catalog (coming next)." />
-);
+export const ProductsPage: React.FC = () => <ProductsView />;

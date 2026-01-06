@@ -1,6 +1,4 @@
 import React from "react";
-import { PlaceholderPage } from "./PlaceholderPage";
+import { UsersView } from "../modules/users/UsersView";
 
-export const UsersPage: React.FC = () => (
-  <PlaceholderPage title="Users" description="User management (coming next)." />
-);
+export const UsersPage: React.FC = () => <UsersView />;

@@ -1,6 +1,4 @@
 import React from "react";
-import { PlaceholderPage } from "./PlaceholderPage";
+import { InvoicesView } from "../modules/invoices/InvoicesView";
 
-export const InvoicesPage: React.FC = () => (
-  <PlaceholderPage title="Invoices" description="Invoice ingestion + ledger results (coming next)." />
-);
+export const InvoicesPage: React.FC = () => <InvoicesView />;

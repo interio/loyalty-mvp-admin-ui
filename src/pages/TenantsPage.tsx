@@ -1,6 +1,4 @@
 import React from "react";
-import { PlaceholderPage } from "./PlaceholderPage";
+import { TenantsView } from "../modules/tenants/TenantsView";
 
-export const TenantsPage: React.FC = () => (
-  <PlaceholderPage title="Tenants" description="Manage tenants (coming next)." />
-);
+export const TenantsPage: React.FC = () => <TenantsView />;
