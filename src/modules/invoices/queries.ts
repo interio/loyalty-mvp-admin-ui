@@ -17,6 +17,7 @@ export const INVOICES_BY_TENANT_QUERY = gql`
       lastAttemptAt
       processedAt
       error
+      appliedRulesJson
       lines {
         sku
         quantity
