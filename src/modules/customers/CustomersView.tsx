@@ -27,6 +27,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
 import { CUSTOMERS_BY_TENANT_QUERY, CUSTOMERS_BY_TENANT_SEARCH_QUERY } from "./queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
+import { CUSTOMER_TRANSACTIONS_QUERY } from "../ledger/queries";
 import { useTenant } from "../tenants/TenantContext";
 
 type Customer = {
@@ -48,12 +49,15 @@ export const CustomersView: React.FC = () => {
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
   const [usersCache, setUsersCache] = useState<Record<string, any[]>>({});
   const [loadingUsersFor, setLoadingUsersFor] = useState<string | null>(null);
+  const [transactionsCache, setTransactionsCache] = useState<Record<string, any[]>>({});
+  const [loadingTransactionsFor, setLoadingTransactionsFor] = useState<string | null>(null);
 
   const { data, loading, error, refetch } = useQuery(CUSTOMERS_BY_TENANT_QUERY, {
     variables: { tenantId: selectedTenantId ?? "" },
     skip: !selectedTenantId,
   });
   const [loadUsers] = useLazyQuery(USERS_BY_CUSTOMER_QUERY);
+  const [loadTransactions] = useLazyQuery(CUSTOMER_TRANSACTIONS_QUERY);
   const [searchCustomers, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
     CUSTOMERS_BY_TENANT_SEARCH_QUERY,
   );
@@ -96,15 +100,20 @@ export const CustomersView: React.FC = () => {
       return;
     }
     setExpandedCustomerId(customerId);
-    if (usersCache[customerId]) return;
+    if (usersCache[customerId] && transactionsCache[customerId]) return;
 
     setLoadingUsersFor(customerId);
+    setLoadingTransactionsFor(customerId);
     try {
       const result = await loadUsers({ variables: { customerId } });
       const users = result.data?.usersByCustomer ?? [];
       setUsersCache((prev) => ({ ...prev, [customerId]: users }));
+      const txResult = await loadTransactions({ variables: { customerId } });
+      const transactions = txResult.data?.customerTransactions ?? [];
+      setTransactionsCache((prev) => ({ ...prev, [customerId]: transactions }));
     } finally {
       setLoadingUsersFor(null);
+      setLoadingTransactionsFor(null);
     }
   };
 
@@ -158,6 +167,7 @@ export const CustomersView: React.FC = () => {
                 {activeCustomers.map((customer) => {
                   const isExpanded = expandedCustomerId === customer.id;
                   const users = usersCache[customer.id];
+                  const transactions = transactionsCache[customer.id];
                   return (
                     <React.Fragment key={customer.id}>
                       <TableRow hover>
@@ -229,6 +239,40 @@ export const CustomersView: React.FC = () => {
                                           </Box>
                                         ))}
                                       </Stack>
+                                    )}
+                                  </DetailSection>
+                                </Grid>
+                                <Grid item xs={12}>
+                                  <DetailSection title="Points transactions history">
+                                    {loadingTransactionsFor === customer.id && <LinearProgress />}
+                                    {transactions?.length === 0 && loadingTransactionsFor !== customer.id && (
+                                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                        No transactions found for this customer.
+                                      </Typography>
+                                    )}
+                                    {transactions && transactions.length > 0 && (
+                                      <Table size="small">
+                                        <TableHead>
+                                          <TableRow>
+                                            <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Actor</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Correlation</TableCell>
+                                          </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                          {transactions.map((tx: any) => (
+                                            <TableRow key={tx.id}>
+                                              <TableCell>{formatDate(tx.createdAt)}</TableCell>
+                                              <TableCell>{tx.amount}</TableCell>
+                                              <TableCell>{tx.reason}</TableCell>
+                                              <TableCell>{tx.actorUserId ?? "—"}</TableCell>
+                                              <TableCell>{tx.correlationId ?? "—"}</TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
                                     )}
                                   </DetailSection>
                                 </Grid>
