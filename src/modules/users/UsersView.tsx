@@ -7,12 +7,10 @@ import {
   CardContent,
   CardHeader,
   Collapse,
+  Grid,
   IconButton,
   InputAdornment,
   LinearProgress,
-  List,
-  ListItem,
-  ListItemText,
   Stack,
   Table,
   TableBody,
@@ -26,6 +24,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
+import { DetailSection } from "../../components/DetailSection";
 import { USERS_BY_TENANT_QUERY, USERS_BY_TENANT_SEARCH_QUERY } from "./queries";
 import { useTenant } from "../tenants/TenantContext";
 
@@ -152,34 +151,58 @@ export const UsersView: React.FC = () => {
                         <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
-                              <Typography variant="subtitle2" gutterBottom>
-                                User details
-                              </Typography>
-                              <List dense>
-                                <ListItem>
-                                  <ListItemText primary="User ID" secondary={user.id} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="Tenant ID" secondary={user.tenantId} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText
-                                    primary="Customer"
-                                    secondary={
-                                      user.customer?.name ? `${user.customer.name} (${user.customerId})` : user.customerId
-                                    }
-                                  />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="External ID" secondary={user.externalId ?? "—"} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="Role" secondary={user.role ?? "—"} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="Created" secondary={formatDate(user.createdAt)} />
-                                </ListItem>
-                              </List>
+                              <DetailSection title="User details">
+                                <Grid container spacing={2}>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      User ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {user.id}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Tenant ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {user.tenantId}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Customer
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {user.customer?.name ? `${user.customer.name} (${user.customerId})` : user.customerId}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      External ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {user.externalId ?? "—"}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Role
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {user.role ?? "—"}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Created
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {formatDate(user.createdAt)}
+                                    </Typography>
+                                  </Grid>
+                                </Grid>
+                              </DetailSection>
                             </Box>
                           </Collapse>
                         </TableCell>

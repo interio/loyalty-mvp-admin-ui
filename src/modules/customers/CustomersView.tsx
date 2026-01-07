@@ -11,9 +11,6 @@ import {
   IconButton,
   InputAdornment,
   LinearProgress,
-  List,
-  ListItem,
-  ListItemText,
   Stack,
   Table,
   TableBody,
@@ -27,6 +24,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
+import { DetailSection } from "../../components/DetailSection";
 import { CUSTOMERS_BY_TENANT_QUERY, CUSTOMERS_BY_TENANT_SEARCH_QUERY } from "./queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
 import { useTenant } from "../tenants/TenantContext";
@@ -180,50 +178,59 @@ export const CustomersView: React.FC = () => {
                             <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
                               <Grid container spacing={2}>
                                 <Grid item xs={12} md={6}>
-                                  <Typography variant="subtitle2" gutterBottom>
-                                    Customer details
-                                  </Typography>
-                                  <List dense>
-                                    <ListItem>
-                                      <ListItemText primary="Customer ID" secondary={customer.id} />
-                                    </ListItem>
-                                    <ListItem>
-                                      <ListItemText primary="Tenant ID" secondary={customer.tenantId} />
-                                    </ListItem>
-                                    <ListItem>
-                                      <ListItemText
-                                        primary="Points account"
-                                        secondary={`Balance: ${customer.pointsAccount?.balance ?? 0} • Updated: ${
-                                          formatDate(customer.pointsAccount?.updatedAt ?? undefined)
-                                        }`}
-                                      />
-                                    </ListItem>
-                                  </List>
+                                  <DetailSection title="Customer details">
+                                    <Grid container spacing={2}>
+                                      <Grid item xs={12} sm={6}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                          Customer ID
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                          {customer.id}
+                                        </Typography>
+                                      </Grid>
+                                      <Grid item xs={12} sm={6}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                          Tenant ID
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                          {customer.tenantId}
+                                        </Typography>
+                                      </Grid>
+                                      <Grid item xs={12}>
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                          Points account
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                          Balance: {customer.pointsAccount?.balance ?? 0} • Updated:{" "}
+                                          {formatDate(customer.pointsAccount?.updatedAt ?? undefined)}
+                                        </Typography>
+                                      </Grid>
+                                    </Grid>
+                                  </DetailSection>
                                 </Grid>
                                 <Grid item xs={12} md={6}>
-                                  <Typography variant="subtitle2" gutterBottom>
-                                    Associated users
-                                  </Typography>
-                                  {loadingUsersFor === customer.id && <LinearProgress />}
-                                  {users?.length === 0 && loadingUsersFor !== customer.id && (
-                                    <Typography variant="body2" color="text.secondary">
-                                      No users found for this customer.
-                                    </Typography>
-                                  )}
-                                  {users && users.length > 0 && (
-                                    <List dense>
-                                      {users.map((user: any) => (
-                                        <ListItem key={user.id} divider>
-                                          <ListItemText
-                                            primary={user.email}
-                                            secondary={`id: ${user.id} • role: ${user.role ?? "-"} • customer: ${
-                                              user.customerId
-                                            }`}
-                                          />
-                                        </ListItem>
-                                      ))}
-                                    </List>
-                                  )}
+                                  <DetailSection title="Associated users">
+                                    {loadingUsersFor === customer.id && <LinearProgress />}
+                                    {users?.length === 0 && loadingUsersFor !== customer.id && (
+                                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                        No users found for this customer.
+                                      </Typography>
+                                    )}
+                                    {users && users.length > 0 && (
+                                      <Stack spacing={1}>
+                                        {users.map((user: any) => (
+                                          <Box key={user.id} sx={{ p: 1, bgcolor: "var(--detail-section-inner-bg)", borderRadius: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                              {user.email}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                              id: {user.id} • role: {user.role ?? "-"} • customer: {user.customerId}
+                                            </Typography>
+                                          </Box>
+                                        ))}
+                                      </Stack>
+                                    )}
+                                  </DetailSection>
                                 </Grid>
                               </Grid>
                             </Box>

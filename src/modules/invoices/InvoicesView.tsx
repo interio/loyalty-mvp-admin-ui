@@ -24,6 +24,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
+import { DetailSection } from "../../components/DetailSection";
 import { useTenant } from "../tenants/TenantContext";
 import { INVOICES_BY_TENANT_QUERY } from "./queries";
 
@@ -170,104 +171,125 @@ export const InvoicesView: React.FC = () => {
                         <TableCell colSpan={10} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
-                              <Typography variant="subtitle2" gutterBottom>
-                                Invoice details
-                              </Typography>
-                              <Grid container spacing={2}>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Invoice ID
-                                  </Typography>
-                                  <Typography variant="body2">{invoice.invoiceId}</Typography>
+                              <DetailSection title="Invoice details">
+                                <Grid container spacing={2}>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Invoice ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {invoice.invoiceId}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Tenant ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {invoice.tenantId}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Customer External ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {invoice.customerExternalId ?? "—"}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Currency
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {invoice.currency ?? "—"}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Actor Email
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {invoice.actorEmail ?? "—"}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Actor External ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {invoice.actorExternalId ?? "—"}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Occurred At
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {formatDateTime(invoice.occurredAt)}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Processed At
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {formatDateTime(invoice.processedAt)}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Last Attempt At
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {formatDateTime(invoice.lastAttemptAt)}
+                                    </Typography>
+                                  </Grid>
                                 </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Tenant ID
-                                  </Typography>
-                                  <Typography variant="body2">{invoice.tenantId}</Typography>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Customer External ID
-                                  </Typography>
-                                  <Typography variant="body2">{invoice.customerExternalId ?? "—"}</Typography>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Currency
-                                  </Typography>
-                                  <Typography variant="body2">{invoice.currency ?? "—"}</Typography>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Actor Email
-                                  </Typography>
-                                  <Typography variant="body2">{invoice.actorEmail ?? "—"}</Typography>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Actor External ID
-                                  </Typography>
-                                  <Typography variant="body2">{invoice.actorExternalId ?? "—"}</Typography>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Occurred At
-                                  </Typography>
-                                  <Typography variant="body2">{formatDateTime(invoice.occurredAt)}</Typography>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Processed At
-                                  </Typography>
-                                  <Typography variant="body2">{formatDateTime(invoice.processedAt)}</Typography>
-                                </Grid>
-                                <Grid item xs={12} sm={6} md={4}>
-                                  <Typography variant="caption" color="text.secondary">
-                                    Last Attempt At
-                                  </Typography>
-                                  <Typography variant="body2">{formatDateTime(invoice.lastAttemptAt)}</Typography>
-                                </Grid>
-                              </Grid>
-                              <Typography variant="subtitle2" sx={{ mt: 2 }}>
-                                Line items
-                              </Typography>
-                              <Table size="small">
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell>SKU</TableCell>
-                                    <TableCell>Quantity</TableCell>
-                                    <TableCell>Net Amount</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {lines.map((line, idx) => (
-                                    <TableRow key={`${invoice.id}-line-${idx}`}>
-                                      <TableCell>{line.sku}</TableCell>
-                                      <TableCell>{line.quantity}</TableCell>
-                                      <TableCell>{line.netAmount}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                  {lines.length > 0 && (
+                              </DetailSection>
+                              <DetailSection title="Rules applied" sx={{ mt: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                  No rules data available yet.
+                                </Typography>
+                              </DetailSection>
+                              <DetailSection title="Line items" sx={{ mt: 2 }}>
+                                <Table size="small">
+                                  <TableHead>
                                     <TableRow>
-                                      <TableCell sx={{ fontWeight: 600 }}>Totals</TableCell>
-                                      <TableCell sx={{ fontWeight: 600 }}>{totals.quantity}</TableCell>
-                                      <TableCell sx={{ fontWeight: 600 }}>
-                                        {totals.netAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                      </TableCell>
+                                      <TableCell sx={{ fontWeight: 700 }}>SKU</TableCell>
+                                      <TableCell sx={{ fontWeight: 700 }}>Quantity</TableCell>
+                                      <TableCell sx={{ fontWeight: 700 }}>Net Amount</TableCell>
                                     </TableRow>
-                                  )}
-                                  {lines.length === 0 && (
-                                    <TableRow>
-                                      <TableCell colSpan={3}>
-                                        <Typography variant="body2" color="text.secondary">
-                                          No line items available.
-                                        </Typography>
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
+                                  </TableHead>
+                                  <TableBody>
+                                    {lines.map((line, idx) => (
+                                      <TableRow key={`${invoice.id}-line-${idx}`}>
+                                        <TableCell>{line.sku}</TableCell>
+                                        <TableCell>{line.quantity}</TableCell>
+                                        <TableCell>{line.netAmount}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                    {lines.length > 0 && (
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 700 }}>Totals</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>{totals.quantity}</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>
+                                          {totals.netAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                    {lines.length === 0 && (
+                                      <TableRow>
+                                        <TableCell colSpan={3}>
+                                          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                            No line items available.
+                                          </Typography>
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                  </TableBody>
+                                </Table>
+                              </DetailSection>
                             </Box>
                           </Collapse>
                         </TableCell>

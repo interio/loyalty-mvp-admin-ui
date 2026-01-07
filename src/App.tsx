@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { ThemeProvider, CssBaseline } from "@mui/material";
 import { ApolloProvider } from "@apollo/client";
 import { apolloClient } from "./apolloClient";
 import { AuthProvider } from "./auth/AuthContext";
@@ -14,21 +14,7 @@ import { ProductsPage } from "./pages/ProductsPage";
 import { RulesPage } from "./pages/RulesPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { DashboardPage } from "./pages/DashboardPage";
-
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#0c9b50",
-    },
-    secondary: {
-      main: "#0b1f14",
-    },
-    background: {
-      default: "#f7faf8",
-    },
-  },
-  shape: { borderRadius: 10 },
-});
+import { theme } from "./theme";
 
 const App: React.FC = () => {
   return (

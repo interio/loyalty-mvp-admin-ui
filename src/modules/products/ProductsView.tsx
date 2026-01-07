@@ -7,12 +7,10 @@ import {
   CardContent,
   CardHeader,
   Collapse,
+  Grid,
   IconButton,
   InputAdornment,
   LinearProgress,
-  List,
-  ListItem,
-  ListItemText,
   Stack,
   Table,
   TableBody,
@@ -26,6 +24,7 @@ import {
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
+import { DetailSection } from "../../components/DetailSection";
 import { PRODUCTS_QUERY, PRODUCTS_SEARCH_QUERY } from "./queries";
 
 type Product = {
@@ -130,65 +129,95 @@ export const ProductsView: React.FC = () => {
                         <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
-                              <Typography variant="subtitle2" gutterBottom>
-                                Product details
-                              </Typography>
-                              <List dense>
-                                <ListItem>
-                                  <ListItemText primary="Product ID" secondary={product.id} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="Distributor ID" secondary={product.distributorId} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="SKU" secondary={product.sku} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="GTIN" secondary={product.gtin ?? "—"} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText
-                                    primary="Cost"
-                                    secondary={product.cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                  />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="Created" secondary={formatDate(product.createdAt)} />
-                                </ListItem>
-                                <ListItem>
-                                  <ListItemText primary="Updated" secondary={formatDate(product.updatedAt)} />
-                                </ListItem>
-                                {product.attributes && product.attributes.length > 0 && (
-                                  <ListItem>
-                                    <ListItemText
-                                      primary="Attributes"
-                                      secondary={
-                                        <Box
-                                          component="pre"
-                                          sx={{
-                                            m: 0,
-                                            p: 1,
-                                            bgcolor: "#eef3ef",
-                                            borderRadius: 1,
-                                            fontSize: 12,
-                                            whiteSpace: "pre-wrap",
-                                            wordBreak: "break-word",
-                                          }}
-                                        >
-                                          {JSON.stringify(
-                                            product.attributes.reduce<Record<string, any>>((acc, kv) => {
-                                              acc[kv.key] = kv.value;
-                                              return acc;
-                                            }, {}),
-                                            null,
-                                            2,
-                                          )}
-                                        </Box>
-                                      }
-                                    />
-                                  </ListItem>
+                              <DetailSection title="Product details">
+                                <Grid container spacing={2}>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Product ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {product.id}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Distributor ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {product.distributorId}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      SKU
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {product.sku}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      GTIN
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {product.gtin ?? "—"}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Cost
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {product.cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Created
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {formatDate(product.createdAt)}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Updated
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {formatDate(product.updatedAt)}
+                                    </Typography>
+                                  </Grid>
+                                </Grid>
+                              </DetailSection>
+                              <DetailSection title="Product attributes" sx={{ mt: 2 }}>
+                                {product.attributes && product.attributes.length > 0 ? (
+                                  <Box
+                                    component="pre"
+                                    sx={{
+                                      m: 0,
+                                      p: 1.5,
+                                      bgcolor: "var(--detail-section-inner-bg)",
+                                      borderRadius: 1,
+                                      fontSize: 12,
+                                      whiteSpace: "pre-wrap",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {JSON.stringify(
+                                      product.attributes.reduce<Record<string, any>>((acc, kv) => {
+                                        acc[kv.key] = kv.value;
+                                        return acc;
+                                      }, {}),
+                                      null,
+                                      2,
+                                    )}
+                                  </Box>
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                    No attributes available.
+                                  </Typography>
                                 )}
-                              </List>
+                              </DetailSection>
                             </Box>
                           </Collapse>
                         </TableCell>

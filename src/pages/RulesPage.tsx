@@ -25,6 +25,7 @@ import {
 } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import { DetailSection } from "../components/DetailSection";
 import { apiBaseUrl } from "../config";
 import { useTenant } from "../modules/tenants/TenantContext";
 import { RULES_BY_TENANT_QUERY } from "../modules/rules/queries";
@@ -268,29 +269,30 @@ export const RulesPage: React.FC = () => {
                       <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Rule details
-                            </Typography>
-                            <Stack spacing={1}>
-                              <Typography variant="body2" color="text.secondary">
-                                Rule ID: {rule.id}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                Tenant ID: {rule.tenantId}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                Created: {formatDate(rule.createdAt)}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                Updated: {formatDate(rule.updatedAt)}
-                              </Typography>
-                              {rule.conditions && rule.conditions.length > 0 && (
+                            <DetailSection title="Rule details">
+                              <Stack spacing={1}>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  Rule ID: {rule.id}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  Tenant ID: {rule.tenantId}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  Created: {formatDate(rule.createdAt)}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  Updated: {formatDate(rule.updatedAt)}
+                                </Typography>
+                              </Stack>
+                            </DetailSection>
+                            <DetailSection title="Conditions" sx={{ mt: 2 }}>
+                              {rule.conditions && rule.conditions.length > 0 ? (
                                 <Box
                                   component="pre"
                                   sx={{
                                     m: 0,
-                                    p: 1,
-                                    bgcolor: "#eef3ef",
+                                    p: 1.5,
+                                    bgcolor: "var(--detail-section-inner-bg)",
                                     borderRadius: 1,
                                     fontSize: 12,
                                     whiteSpace: "pre-wrap",
@@ -306,8 +308,12 @@ export const RulesPage: React.FC = () => {
                                     2,
                                   )}
                                 </Box>
+                              ) : (
+                                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                  No conditions available.
+                                </Typography>
                               )}
-                            </Stack>
+                            </DetailSection>
                           </Box>
                         </Collapse>
                       </TableCell>
