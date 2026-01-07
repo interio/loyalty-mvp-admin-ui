@@ -7,6 +7,9 @@ export const INVOICES_BY_TENANT_QUERY = gql`
       tenantId
       invoiceId
       customerExternalId
+      currency
+      actorEmail
+      actorExternalId
       occurredAt
       receivedAt
       status
@@ -14,6 +17,11 @@ export const INVOICES_BY_TENANT_QUERY = gql`
       lastAttemptAt
       processedAt
       error
+      lines {
+        sku
+        quantity
+        netAmount
+      }
     }
   }
 `;
