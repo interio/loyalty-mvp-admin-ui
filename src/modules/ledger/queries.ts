@@ -10,6 +10,7 @@ export const CUSTOMER_TRANSACTIONS_QUERY = gql`
       reason
       correlationId
       createdAt
+      appliedRulesJson
     }
   }
 `;

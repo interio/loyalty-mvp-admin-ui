@@ -118,6 +118,24 @@ export const CustomersView: React.FC = () => {
   };
 
   const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "-");
+  const parseAppliedRules = (raw?: string | null) => {
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const describeRuleDetails = (rule: any) => {
+    const details = rule.conditions ?? rule.Conditions ?? {};
+    if (!details || typeof details !== "object") return "";
+    const entries = Object.entries(details)
+      .filter(([, value]) => value !== null && value !== undefined && value !== "")
+      .map(([key, value]) => `${key}:${value}`);
+    return entries.length > 0 ? `{${entries.join(", ")}}` : "";
+  };
 
   return (
     <Card>
@@ -234,7 +252,7 @@ export const CustomersView: React.FC = () => {
                                               {user.email}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                              id: {user.id} • role: {user.role ?? "-"} • customer: {user.customerId}
+                                              id: {user.id} • role: {user.role ?? "-"}
                                             </Typography>
                                           </Box>
                                         ))}
@@ -257,20 +275,61 @@ export const CustomersView: React.FC = () => {
                                             <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                                             <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
                                             <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>Rules</TableCell>
                                             <TableCell sx={{ fontWeight: 700 }}>Actor</TableCell>
                                             <TableCell sx={{ fontWeight: 700 }}>Correlation</TableCell>
                                           </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                          {transactions.map((tx: any) => (
-                                            <TableRow key={tx.id}>
-                                              <TableCell>{formatDate(tx.createdAt)}</TableCell>
-                                              <TableCell>{tx.amount}</TableCell>
-                                              <TableCell>{tx.reason}</TableCell>
-                                              <TableCell>{tx.actorUserId ?? "—"}</TableCell>
-                                              <TableCell>{tx.correlationId ?? "—"}</TableCell>
-                                            </TableRow>
-                                          ))}
+                                          {transactions.map((tx: any) => {
+                                            const userEmail = users?.find((u: any) => u.id === tx.actorUserId)?.email;
+                                            const actorLabel = tx.actorUserId && userEmail
+                                              ? `${userEmail} (${tx.actorUserId})`
+                                              : customer.contactEmail ?? "—";
+                                            const appliedRules = parseAppliedRules(tx.appliedRulesJson);
+                                            const rulesLabel = appliedRules.length > 0 ? `${appliedRules.length} rule(s)` : "—";
+                                            return (
+                                              <TableRow key={tx.id}>
+                                                <TableCell>{formatDate(tx.createdAt)}</TableCell>
+                                                <TableCell>{tx.amount}</TableCell>
+                                                <TableCell>{tx.reason}</TableCell>
+                                                <TableCell>
+                                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                                    {rulesLabel}
+                                                  </Typography>
+                                                  {appliedRules.length > 0 && (
+                                                    <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                                                      {appliedRules.map((rule: any, idx: number) => {
+                                                        const ruleType = rule.ruleType ?? rule.RuleType ?? "rule";
+                                                        const ruleVersion = rule.ruleVersion ?? rule.RuleVersion ?? "?";
+                                                        const pointsAwarded = rule.pointsAwarded ?? rule.PointsAwarded ?? 0;
+                                                        const ruleId = rule.ruleId ?? rule.RuleId ?? "";
+                                                        const details = describeRuleDetails(rule);
+                                                        return (
+                                                          <Box key={`${tx.id}-rule-${idx}`} sx={{ bgcolor: "var(--detail-section-inner-bg)", borderRadius: 1, p: 1 }}>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                                              type: {ruleType}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                                              version: v{ruleVersion}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                                              id: {ruleId || "—"}
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                                              conditions: {details || "—"}
+                                                            </Typography>
+                                                          </Box>
+                                                        );
+                                                      })}
+                                                    </Stack>
+                                                  )}
+                                                </TableCell>
+                                                <TableCell>{actorLabel}</TableCell>
+                                                <TableCell>{tx.correlationId ?? "—"}</TableCell>
+                                              </TableRow>
+                                            );
+                                          })}
                                         </TableBody>
                                       </Table>
                                     )}

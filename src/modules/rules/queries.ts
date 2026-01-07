@@ -6,6 +6,7 @@ export const RULES_BY_TENANT_QUERY = gql`
       id
       tenantId
       ruleType
+      ruleVersion
       active
       priority
       effectiveFrom

@@ -42,6 +42,7 @@ type PointsRule = {
   id: string;
   tenantId: string;
   ruleType: string;
+  ruleVersion: number;
   active: boolean;
   priority: number;
   effectiveFrom?: string;
@@ -367,6 +368,7 @@ export const RulesPage: React.FC = () => {
               <TableRow>
                 <TableCell />
                 <TableCell>Type</TableCell>
+                <TableCell>Version</TableCell>
                 <TableCell>Active</TableCell>
                 <TableCell>Priority</TableCell>
                 <TableCell>Effective From</TableCell>
@@ -386,13 +388,14 @@ export const RulesPage: React.FC = () => {
                         </IconButton>
                       </TableCell>
                       <TableCell>{rule.ruleType}</TableCell>
+                      <TableCell>{rule.ruleVersion}</TableCell>
                       <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
                       <TableCell>{rule.priority}</TableCell>
                       <TableCell>{formatDate(rule.effectiveFrom)}</TableCell>
                       <TableCell>{formatDate(rule.effectiveTo)}</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
+                      <TableCell colSpan={7} sx={{ p: 0, border: 0 }}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
                             <DetailSection title="Rule details">
@@ -411,6 +414,9 @@ export const RulesPage: React.FC = () => {
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                   Rule type: {rule.ruleType}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  Version: {rule.ruleVersion}
                                 </Typography>
                                 <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                                   <FormControlLabel
@@ -618,7 +624,7 @@ export const RulesPage: React.FC = () => {
               })}
               {selectedTenantId && !rulesLoading && rules.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={7}>
                     <Typography variant="body2" color="text.secondary">
                       No rules found for this tenant.
                     </Typography>
