@@ -1,12 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useLazyQuery, useQuery } from "@apollo/client";
+import { useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   CardHeader,
   Collapse,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   IconButton,
   InputAdornment,
@@ -27,7 +32,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
 import { CUSTOMERS_BY_TENANT_QUERY, CUSTOMERS_BY_TENANT_SEARCH_QUERY } from "./queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
-import { CUSTOMER_TRANSACTIONS_QUERY } from "../ledger/queries";
+import { CUSTOMER_TRANSACTIONS_QUERY, MANUAL_ADJUST_POINTS_MUTATION } from "../ledger/queries";
 import { useTenant } from "../tenants/TenantContext";
 
 type Customer = {
@@ -51,6 +56,11 @@ export const CustomersView: React.FC = () => {
   const [loadingUsersFor, setLoadingUsersFor] = useState<string | null>(null);
   const [transactionsCache, setTransactionsCache] = useState<Record<string, any[]>>({});
   const [loadingTransactionsFor, setLoadingTransactionsFor] = useState<string | null>(null);
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustCustomerId, setAdjustCustomerId] = useState<string | null>(null);
+  const [adjustAmount, setAdjustAmount] = useState("");
+  const [adjustCorrelationId, setAdjustCorrelationId] = useState("");
+  const [adjustError, setAdjustError] = useState<string | null>(null);
 
   const { data, loading, error, refetch } = useQuery(CUSTOMERS_BY_TENANT_QUERY, {
     variables: { tenantId: selectedTenantId ?? "" },
@@ -58,6 +68,7 @@ export const CustomersView: React.FC = () => {
   });
   const [loadUsers] = useLazyQuery(USERS_BY_CUSTOMER_QUERY);
   const [loadTransactions] = useLazyQuery(CUSTOMER_TRANSACTIONS_QUERY);
+  const [manualAdjustPoints, { loading: adjusting }] = useMutation(MANUAL_ADJUST_POINTS_MUTATION);
   const [searchCustomers, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
     CUSTOMERS_BY_TENANT_SEARCH_QUERY,
   );
@@ -135,6 +146,41 @@ export const CustomersView: React.FC = () => {
       .filter(([, value]) => value !== null && value !== undefined && value !== "")
       .map(([key, value]) => `${key}:${value}`);
     return entries.length > 0 ? `{${entries.join(", ")}}` : "";
+  };
+
+  const openAdjustDialog = (customerId: string) => {
+    setAdjustCustomerId(customerId);
+    setAdjustAmount("");
+    setAdjustCorrelationId("");
+    setAdjustError(null);
+    setAdjustOpen(true);
+  };
+
+  const submitAdjustment = async () => {
+    if (!adjustCustomerId) return;
+    const amountValue = Number(adjustAmount);
+    if (!Number.isFinite(amountValue) || amountValue === 0) {
+      setAdjustError("Amount must be a non-zero number.");
+      return;
+    }
+    setAdjustError(null);
+    try {
+      await manualAdjustPoints({
+        variables: {
+          input: {
+            customerId: adjustCustomerId,
+            amount: amountValue,
+            correlationId: adjustCorrelationId.trim() || null,
+          },
+        },
+      });
+      const txResult = await loadTransactions({ variables: { customerId: adjustCustomerId } });
+      const transactions = txResult.data?.customerTransactions ?? [];
+      setTransactionsCache((prev) => ({ ...prev, [adjustCustomerId]: transactions }));
+      setAdjustOpen(false);
+    } catch (err) {
+      setAdjustError((err as Error).message);
+    }
   };
 
   return (
@@ -262,6 +308,16 @@ export const CustomersView: React.FC = () => {
                                 </Grid>
                                 <Grid item xs={12}>
                                   <DetailSection title="Points transactions history">
+                                    <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+                                      <Button
+                                        size="small"
+                                        variant="contained"
+                                        sx={{ bgcolor: "#0c9b50" }}
+                                        onClick={() => openAdjustDialog(customer.id)}
+                                      >
+                                        Manual adjustment
+                                      </Button>
+                                    </Box>
                                     {loadingTransactionsFor === customer.id && <LinearProgress />}
                                     {transactions?.length === 0 && loadingTransactionsFor !== customer.id && (
                                       <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -357,6 +413,33 @@ export const CustomersView: React.FC = () => {
           </TableContainer>
         </Stack>
       </CardContent>
+      <Dialog open={adjustOpen} onClose={() => setAdjustOpen(false)} aria-labelledby="manual-adjust-title">
+        <DialogTitle id="manual-adjust-title">Manual points adjustment</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Stack spacing={2} sx={{ mt: 1, minWidth: 320 }}>
+            <TextField
+              label="Amount"
+              type="number"
+              value={adjustAmount}
+              onChange={(e) => setAdjustAmount(e.target.value)}
+              helperText="Use negative values to deduct points."
+              required
+            />
+            <TextField
+              label="Correlation ID (optional)"
+              value={adjustCorrelationId}
+              onChange={(e) => setAdjustCorrelationId(e.target.value)}
+            />
+            {adjustError && <Alert severity="error">{adjustError}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setAdjustOpen(false)}>Cancel</Button>
+          <Button variant="contained" sx={{ bgcolor: "#0c9b50" }} onClick={submitAdjustment} disabled={adjusting}>
+            {adjusting ? "Saving..." : "Apply"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };
