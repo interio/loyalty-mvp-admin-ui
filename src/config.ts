@@ -3,8 +3,10 @@
 const envGraphql = import.meta.env.VITE_GRAPHQL_URL?.trim();
 export const graphqlEndpoint = envGraphql || "/graphql";
 
-// Keep REST base for legacy calls (rules upsert) — falls back to VITE_API_URL, otherwise current origin or localhost.
-// Temporary while rules upsert is REST; remove once everything moves to GraphQL.
+// Keep REST base for legacy calls (rules upsert/update/delete) — prefer VITE_API_URL.
+// In prod, fall back to current origin; in dev, default to localhost backend.
+// Temporary while rules upsert/update/delete are REST; remove once everything moves to GraphQL.
 const envApi = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
 const originApi = typeof window !== "undefined" ? window.location.origin : undefined;
-export const apiBaseUrl = envApi || originApi || "http://localhost:8080";
+const isLocalUi = typeof window !== "undefined" && window.location.hostname === "localhost";
+export const apiBaseUrl = envApi || (!isLocalUi && originApi) || "http://localhost:8080";

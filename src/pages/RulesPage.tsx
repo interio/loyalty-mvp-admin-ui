@@ -7,13 +7,19 @@ import {
   Card,
   CardContent,
   Collapse,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
+  FormControlLabel,
   IconButton,
   InputLabel,
   LinearProgress,
   MenuItem,
   Select,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -45,6 +51,14 @@ type PointsRule = {
   conditions?: { key: string; value?: string | null }[];
 };
 
+type RuleEditState = {
+  active: boolean;
+  priority: string;
+  effectiveFrom: string;
+  effectiveTo: string;
+  conditions: Record<string, string>;
+};
+
 export const RulesPage: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const [ruleType, setRuleType] = useState<RuleType | "">("");
@@ -57,6 +71,12 @@ export const RulesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
+  const [editStateById, setEditStateById] = useState<Record<string, RuleEditState>>({});
+  const [ruleMessages, setRuleMessages] = useState<Record<string, string>>({});
+  const [ruleErrors, setRuleErrors] = useState<Record<string, string>>({});
+  const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
+  const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
+  const [confirmDeleteRuleId, setConfirmDeleteRuleId] = useState<string | null>(null);
 
   const { data, loading: rulesLoading, error: rulesError, refetch } = useQuery(RULES_BY_TENANT_QUERY, {
     variables: { tenantId: selectedTenantId ?? "" },
@@ -69,7 +89,17 @@ export const RulesPage: React.FC = () => {
 
   useEffect(() => {
     setExpandedRuleId(null);
+    setEditStateById({});
+    setRuleMessages({});
+    setRuleErrors({});
   }, [selectedTenantId]);
+
+  useEffect(() => {
+    if (!expandedRuleId) return;
+    const rule = rules.find((r) => r.id === expandedRuleId);
+    if (!rule) return;
+    setEditStateById((prev) => (prev[rule.id] ? prev : { ...prev, [rule.id]: buildEditState(rule) }));
+  }, [expandedRuleId, rules]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +212,101 @@ export const RulesPage: React.FC = () => {
 
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
   const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
+  const toLocalInput = (value?: string | null) => (value ? new Date(value).toISOString().slice(0, 16) : "");
+
+  const buildEditState = (rule: PointsRule): RuleEditState => {
+    const conditions = (rule.conditions ?? []).reduce<Record<string, string>>((acc, kv) => {
+      acc[kv.key] = kv.value ?? "";
+      return acc;
+    }, {});
+    return {
+      active: rule.active,
+      priority: String(rule.priority ?? 0),
+      effectiveFrom: toLocalInput(rule.effectiveFrom),
+      effectiveTo: toLocalInput(rule.effectiveTo),
+      conditions,
+    };
+  };
+
+  const buildConditionsPayload = (rule: PointsRule, state: RuleEditState) => {
+    if (rule.ruleType === "sku_quantity") {
+      return {
+        sku: (state.conditions.sku ?? "").trim(),
+        quantityStep: Number(state.conditions.quantityStep || 0),
+        rewardPoints: Number(state.conditions.rewardPoints || 0),
+      };
+    }
+    return {
+      spendStep: Number(state.conditions.spendStep || 0),
+      rewardPoints: Number(state.conditions.rewardPoints || 0),
+    };
+  };
+
+  const handleUpdateRule = async (rule: PointsRule) => {
+    if (!selectedTenantId) return;
+    const state = editStateById[rule.id];
+    if (!state) return;
+    setSavingRuleId(rule.id);
+    setRuleErrors((prev) => ({ ...prev, [rule.id]: "" }));
+    setRuleMessages((prev) => ({ ...prev, [rule.id]: "" }));
+    try {
+      const payload = {
+        tenantId: selectedTenantId,
+        ruleType: rule.ruleType,
+        active: state.active,
+        priority: Number(state.priority || 0),
+        effectiveFrom: state.effectiveFrom ? new Date(state.effectiveFrom).toISOString() : undefined,
+        effectiveTo: state.effectiveTo ? new Date(state.effectiveTo).toISOString() : null,
+        conditions: buildConditionsPayload(rule, state),
+      };
+
+      const res = await fetch(`${apiBaseUrl}/api/v1/rules/points/${rule.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const detail = await res.text();
+        throw new Error(detail || "Failed to update rule");
+      }
+      setRuleMessages((prev) => ({ ...prev, [rule.id]: "Rule updated." }));
+      await loadRules({ variables: { tenantId: selectedTenantId } });
+      refetch();
+    } catch (err) {
+      setRuleErrors((prev) => ({ ...prev, [rule.id]: (err as Error).message }));
+    } finally {
+      setSavingRuleId(null);
+    }
+  };
+
+  const handleDeleteRule = async (rule: PointsRule) => {
+    if (!selectedTenantId) return;
+    setDeletingRuleId(rule.id);
+    setRuleErrors((prev) => ({ ...prev, [rule.id]: "" }));
+    setRuleMessages((prev) => ({ ...prev, [rule.id]: "" }));
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/v1/rules/points/${rule.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const detail = await res.text();
+        throw new Error(detail || "Failed to delete rule");
+      }
+      setRuleMessages((prev) => ({ ...prev, [rule.id]: "Rule deleted." }));
+      setEditStateById((prev) => {
+        const next = { ...prev };
+        delete next[rule.id];
+        return next;
+      });
+      await loadRules({ variables: { tenantId: selectedTenantId } });
+      refetch();
+    } catch (err) {
+      setRuleErrors((prev) => ({ ...prev, [rule.id]: (err as Error).message }));
+    } finally {
+      setDeletingRuleId(null);
+    }
+  };
 
   return (
     <Card sx={{ borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}>
@@ -251,6 +376,7 @@ export const RulesPage: React.FC = () => {
             <TableBody>
               {rules.map((rule) => {
                 const isExpanded = expandedRuleId === rule.id;
+                const editState = editStateById[rule.id];
                 return (
                   <React.Fragment key={rule.id}>
                     <TableRow hover>
@@ -283,37 +409,206 @@ export const RulesPage: React.FC = () => {
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                   Updated: {formatDate(rule.updatedAt)}
                                 </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  Rule type: {rule.ruleType}
+                                </Typography>
+                                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                                  <FormControlLabel
+                                    control={
+                                      <Switch
+                                        checked={!!editState?.active}
+                                        onChange={(e) =>
+                                          setEditStateById((prev) => ({
+                                            ...prev,
+                                            [rule.id]: {
+                                              ...(prev[rule.id] ?? buildEditState(rule)),
+                                              active: e.target.checked,
+                                            },
+                                          }))
+                                        }
+                                      />
+                                    }
+                                    label="Active"
+                                  />
+                                  <TextField
+                                    label="Priority"
+                                    type="number"
+                                    value={editState?.priority ?? ""}
+                                    onChange={(e) =>
+                                      setEditStateById((prev) => ({
+                                        ...prev,
+                                        [rule.id]: {
+                                          ...(prev[rule.id] ?? buildEditState(rule)),
+                                          priority: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                  />
+                                  <TextField
+                                    label="Effective from"
+                                    type="datetime-local"
+                                    value={editState?.effectiveFrom ?? ""}
+                                    onChange={(e) =>
+                                      setEditStateById((prev) => ({
+                                        ...prev,
+                                        [rule.id]: {
+                                          ...(prev[rule.id] ?? buildEditState(rule)),
+                                          effectiveFrom: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    InputLabelProps={{ shrink: true }}
+                                  />
+                                  <TextField
+                                    label="Effective to"
+                                    type="datetime-local"
+                                    value={editState?.effectiveTo ?? ""}
+                                    onChange={(e) =>
+                                      setEditStateById((prev) => ({
+                                        ...prev,
+                                        [rule.id]: {
+                                          ...(prev[rule.id] ?? buildEditState(rule)),
+                                          effectiveTo: e.target.value,
+                                        },
+                                      }))
+                                    }
+                                    InputLabelProps={{ shrink: true }}
+                                  />
+                                </Stack>
                               </Stack>
                             </DetailSection>
                             <DetailSection title="Conditions" sx={{ mt: 2 }}>
-                              {rule.conditions && rule.conditions.length > 0 ? (
-                                <Box
-                                  component="pre"
-                                  sx={{
-                                    m: 0,
-                                    p: 1.5,
-                                    bgcolor: "var(--detail-section-inner-bg)",
-                                    borderRadius: 1,
-                                    fontSize: 12,
-                                    whiteSpace: "pre-wrap",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {JSON.stringify(
-                                    rule.conditions.reduce<Record<string, string | null>>((acc, kv) => {
-                                      acc[kv.key] = kv.value ?? null;
-                                      return acc;
-                                    }, {}),
-                                    null,
-                                    2,
-                                  )}
-                                </Box>
+                              {editState ? (
+                                rule.ruleType === "sku_quantity" ? (
+                                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                                    <TextField
+                                      label="Product SKU"
+                                      value={editState.conditions.sku ?? ""}
+                                      onChange={(e) =>
+                                        setEditStateById((prev) => ({
+                                          ...prev,
+                                          [rule.id]: {
+                                            ...(prev[rule.id] ?? buildEditState(rule)),
+                                            conditions: {
+                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
+                                              sku: e.target.value,
+                                            },
+                                          },
+                                        }))
+                                      }
+                                      fullWidth
+                                    />
+                                    <TextField
+                                      label="Quantity step (X)"
+                                      type="number"
+                                      value={editState.conditions.quantityStep ?? ""}
+                                      onChange={(e) =>
+                                        setEditStateById((prev) => ({
+                                          ...prev,
+                                          [rule.id]: {
+                                            ...(prev[rule.id] ?? buildEditState(rule)),
+                                            conditions: {
+                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
+                                              quantityStep: e.target.value,
+                                            },
+                                          },
+                                        }))
+                                      }
+                                      fullWidth
+                                    />
+                                    <TextField
+                                      label="Reward points (Y)"
+                                      type="number"
+                                      value={editState.conditions.rewardPoints ?? ""}
+                                      onChange={(e) =>
+                                        setEditStateById((prev) => ({
+                                          ...prev,
+                                          [rule.id]: {
+                                            ...(prev[rule.id] ?? buildEditState(rule)),
+                                            conditions: {
+                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
+                                              rewardPoints: e.target.value,
+                                            },
+                                          },
+                                        }))
+                                      }
+                                      fullWidth
+                                    />
+                                  </Stack>
+                                ) : (
+                                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                                    <TextField
+                                      label="Spend X (currency)"
+                                      type="number"
+                                      value={editState.conditions.spendStep ?? ""}
+                                      onChange={(e) =>
+                                        setEditStateById((prev) => ({
+                                          ...prev,
+                                          [rule.id]: {
+                                            ...(prev[rule.id] ?? buildEditState(rule)),
+                                            conditions: {
+                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
+                                              spendStep: e.target.value,
+                                            },
+                                          },
+                                        }))
+                                      }
+                                      fullWidth
+                                    />
+                                    <TextField
+                                      label="Get Y points"
+                                      type="number"
+                                      value={editState.conditions.rewardPoints ?? ""}
+                                      onChange={(e) =>
+                                        setEditStateById((prev) => ({
+                                          ...prev,
+                                          [rule.id]: {
+                                            ...(prev[rule.id] ?? buildEditState(rule)),
+                                            conditions: {
+                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
+                                              rewardPoints: e.target.value,
+                                            },
+                                          },
+                                        }))
+                                      }
+                                      fullWidth
+                                    />
+                                  </Stack>
+                                )
                               ) : (
                                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                  No conditions available.
+                                  Loading rule conditions...
                                 </Typography>
                               )}
                             </DetailSection>
+                            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
+                              <Button
+                                variant="contained"
+                                sx={{ bgcolor: "#0c9b50" }}
+                                onClick={() => handleUpdateRule(rule)}
+                                disabled={savingRuleId === rule.id || deletingRuleId === rule.id}
+                              >
+                                {savingRuleId === rule.id ? "Saving..." : "Save changes"}
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                onClick={() => setConfirmDeleteRuleId(rule.id)}
+                                disabled={savingRuleId === rule.id || deletingRuleId === rule.id}
+                              >
+                                {deletingRuleId === rule.id ? "Deleting..." : "Delete rule"}
+                              </Button>
+                            </Stack>
+                            {ruleErrors[rule.id] && (
+                              <Alert severity="error" sx={{ mt: 2 }}>
+                                {ruleErrors[rule.id]}
+                              </Alert>
+                            )}
+                            {ruleMessages[rule.id] && (
+                              <Alert severity="success" sx={{ mt: 2 }}>
+                                {ruleMessages[rule.id]}
+                              </Alert>
+                            )}
                           </Box>
                         </Collapse>
                       </TableCell>
@@ -333,6 +628,32 @@ export const RulesPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Dialog
+          open={!!confirmDeleteRuleId}
+          onClose={() => setConfirmDeleteRuleId(null)}
+          aria-labelledby="delete-rule-title"
+        >
+          <DialogTitle id="delete-rule-title">Delete rule?</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              This action cannot be undone. The rule will be permanently removed.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setConfirmDeleteRuleId(null)}>Cancel</Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => {
+                const rule = rules.find((r) => r.id === confirmDeleteRuleId);
+                setConfirmDeleteRuleId(null);
+                if (rule) void handleDeleteRule(rule);
+              }}
+            >
+              Delete rule
+            </Button>
+          </DialogActions>
+        </Dialog>
       </CardContent>
     </Card>
   );
