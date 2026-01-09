@@ -13,6 +13,7 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
+import Collapse from "@mui/material/Collapse";
 import MenuIcon from "@mui/icons-material/Menu";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DashboardCustomizeIcon from "@mui/icons-material/DashboardCustomize";
@@ -22,6 +23,8 @@ import StoreIcon from "@mui/icons-material/Store";
 import RuleIcon from "@mui/icons-material/Rule";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BusinessIcon from "@mui/icons-material/Business";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
@@ -36,7 +39,6 @@ const navItems = [
   { label: "Dashboard", path: "/", icon: <DashboardCustomizeIcon /> },
   { label: "Tenants", path: "/tenants", icon: <BusinessIcon /> },
   { label: "Customers", path: "/customers", icon: <PeopleIcon /> },
-  { label: "Users", path: "/users", icon: <AccountCircleIcon /> },
   { label: "Products", path: "/products", icon: <StoreIcon /> },
   { label: "Rules", path: "/rules", icon: <RuleIcon /> },
   { label: "Invoices", path: "/invoices", icon: <ReceiptLongIcon /> },
@@ -62,6 +64,18 @@ const AppLayoutContent: React.FC = () => {
     navigate("/login");
   };
 
+  const isCustomersActive = location.pathname === "/customers" || location.pathname === "/users";
+  const [customersOpen, setCustomersOpen] = React.useState(isCustomersActive);
+  React.useEffect(() => {
+    setCustomersOpen(isCustomersActive);
+  }, [isCustomersActive]);
+
+  const handleCustomersClick = () => {
+    setCustomersOpen(true);
+    navigate("/customers");
+    setMobileOpen(false);
+  };
+
   const drawer = (
     <div>
       <Toolbar sx={{ color: "#0f3d23" }}>
@@ -72,19 +86,53 @@ const AppLayoutContent: React.FC = () => {
       </Toolbar>
       <Divider />
       <List>
-        {navItems.map((item) => (
-          <ListItem key={item.path} disablePadding>
-            <ListItemButton
-              component={RouterLink}
-              to={item.path}
-              selected={location.pathname === item.path}
-              onClick={() => setMobileOpen(false)}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+        {navItems.map((item) => {
+          if (item.path === "/customers") {
+            return (
+              <React.Fragment key={item.path}>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={handleCustomersClick} selected={isCustomersActive}>
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.label} />
+                    {customersOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  </ListItemButton>
+                </ListItem>
+                <Collapse in={customersOpen} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    <ListItem disablePadding>
+                      <ListItemButton
+                        component={RouterLink}
+                        to="/users"
+                        selected={location.pathname === "/users"}
+                        sx={{ pl: 4 }}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        <ListItemIcon>
+                          <AccountCircleIcon />
+                        </ListItemIcon>
+                        <ListItemText primary="Users" />
+                      </ListItemButton>
+                    </ListItem>
+                  </List>
+                </Collapse>
+              </React.Fragment>
+            );
+          }
+
+          return (
+            <ListItem key={item.path} disablePadding>
+              <ListItemButton
+                component={RouterLink}
+                to={item.path}
+                selected={location.pathname === item.path}
+                onClick={() => setMobileOpen(false)}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
       </List>
     </div>
   );
