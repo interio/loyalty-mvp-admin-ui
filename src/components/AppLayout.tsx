@@ -15,6 +15,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import MenuIcon from "@mui/icons-material/Menu";
 import LogoutIcon from "@mui/icons-material/Logout";
+import DashboardCustomizeIcon from "@mui/icons-material/DashboardCustomize";
 import PeopleIcon from "@mui/icons-material/People";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import StoreIcon from "@mui/icons-material/Store";
@@ -32,6 +33,7 @@ const drawerWidth = 240;
 const logoUrl = new URL("../assets/eazle_logo_transparent.png", import.meta.url).href;
 
 const navItems = [
+  { label: "Dashboard", path: "/", icon: <DashboardCustomizeIcon /> },
   { label: "Tenants", path: "/tenants", icon: <BusinessIcon /> },
   { label: "Customers", path: "/customers", icon: <PeopleIcon /> },
   { label: "Users", path: "/users", icon: <AccountCircleIcon /> },

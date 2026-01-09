@@ -8,7 +8,7 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as any)?.from?.pathname || "/tenants";
+  const from = (location.state as any)?.from?.pathname || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +37,7 @@ export const LoginPage: React.FC = () => {
             <LockOutlinedIcon />
           </Avatar>
           <Typography component="h1" variant="h5" sx={{ color: "#0b1f14" }}>
-            Loyalty Admin Login
+            Loyalty Login
           </Typography>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: "100%", display: "flex", flexDirection: "column", gap: 2 }}>
             <TextField
