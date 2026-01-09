@@ -129,6 +129,7 @@ export const CustomersView: React.FC = () => {
   };
 
   const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "-");
+  const formatDateTime = (value?: string) => (value ? new Date(value).toLocaleString() : "-");
   const parseAppliedRules = (raw?: string | null) => {
     if (!raw) return [];
     try {
@@ -346,7 +347,7 @@ export const CustomersView: React.FC = () => {
                                             const rulesLabel = appliedRules.length > 0 ? `${appliedRules.length} rule(s)` : "—";
                                             return (
                                               <TableRow key={tx.id}>
-                                                <TableCell>{formatDate(tx.createdAt)}</TableCell>
+                                              <TableCell>{formatDateTime(tx.createdAt)}</TableCell>
                                                 <TableCell>{tx.amount}</TableCell>
                                                 <TableCell>{tx.reason}</TableCell>
                                                 <TableCell>
