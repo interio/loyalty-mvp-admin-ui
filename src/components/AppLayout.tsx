@@ -15,7 +15,6 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import MenuIcon from "@mui/icons-material/Menu";
 import LogoutIcon from "@mui/icons-material/Logout";
-import DashboardCustomizeIcon from "@mui/icons-material/DashboardCustomize";
 import PeopleIcon from "@mui/icons-material/People";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import StoreIcon from "@mui/icons-material/Store";
@@ -30,6 +29,7 @@ import { useAuth } from "../auth/AuthContext";
 import { TenantProvider, useTenant } from "../modules/tenants/TenantContext";
 
 const drawerWidth = 240;
+const logoUrl = new URL("../assets/eazle_logo_transparent.png", import.meta.url).href;
 
 const navItems = [
   { label: "Tenants", path: "/tenants", icon: <BusinessIcon /> },
@@ -63,9 +63,9 @@ const AppLayoutContent: React.FC = () => {
   const drawer = (
     <div>
       <Toolbar sx={{ color: "#0f3d23" }}>
-        <DashboardCustomizeIcon sx={{ mr: 1 }} />
+        <Box component="img" src={logoUrl} alt="Eazle logo" sx={{ width: 60, height: "auto", mr: 1 }} />
         <Typography variant="h6" noWrap component="div">
-          Loyalty Admin
+          Loyalty
         </Typography>
       </Toolbar>
       <Divider />
@@ -107,8 +107,9 @@ const AppLayoutContent: React.FC = () => {
           >
             <MenuIcon />
           </IconButton>
+          <Box component="img" src={logoUrl} alt="Eazle logo" sx={{ width: 60, height: "auto", mr: 1 }} />
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Loyalty Admin
+            Loyalty
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <FormControl
