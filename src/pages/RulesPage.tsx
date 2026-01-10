@@ -287,9 +287,12 @@ export const RulesPage: React.FC = () => {
     setRuleErrors((prev) => ({ ...prev, [rule.id]: "" }));
     setRuleMessages((prev) => ({ ...prev, [rule.id]: "" }));
     try {
-      const res = await fetch(`${apiBaseUrl}/api/v1/rules/points/${rule.id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `${apiBaseUrl}/api/v1/rules/points/${rule.id}?tenantId=${encodeURIComponent(selectedTenantId)}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (!res.ok) {
         const detail = await res.text();
         throw new Error(detail || "Failed to delete rule");
