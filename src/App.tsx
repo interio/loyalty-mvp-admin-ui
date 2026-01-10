@@ -13,6 +13,8 @@ import { UsersPage } from "./pages/UsersPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { RewardProductsPage } from "./pages/RewardProductsPage";
 import { RewardProductEditPage } from "./pages/RewardProductEditPage";
+import { RewardOrdersPage } from "./pages/RewardOrdersPage";
+import { RewardOrderDetailsPage } from "./pages/RewardOrderDetailsPage";
 import { RulesPage } from "./pages/RulesPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -36,6 +38,8 @@ const App: React.FC = () => {
                   <Route path="/products" element={<ProductsPage />} />
                   <Route path="/reward-products" element={<RewardProductsPage />} />
                   <Route path="/reward-products/:id" element={<RewardProductEditPage />} />
+                  <Route path="/reward-orders" element={<RewardOrdersPage />} />
+                  <Route path="/reward-orders/:id" element={<RewardOrderDetailsPage />} />
                   <Route path="/rules" element={<RulesPage />} />
                   <Route path="/invoices" element={<InvoicesPage />} />
                 </Route>

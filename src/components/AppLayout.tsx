@@ -26,6 +26,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BusinessIcon from "@mui/icons-material/Business";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import RedeemIcon from "@mui/icons-material/Redeem";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
@@ -42,6 +43,7 @@ const navItems = [
   { label: "Customers", path: "/customers", icon: <PeopleIcon /> },
   { label: "Products", path: "/products", icon: <StoreIcon /> },
   { label: "Reward Products", path: "/reward-products", icon: <CardGiftcardIcon /> },
+  { label: "Reward Orders", path: "/reward-orders", icon: <RedeemIcon /> },
   { label: "Rules", path: "/rules", icon: <RuleIcon /> },
   { label: "Invoices", path: "/invoices", icon: <ReceiptLongIcon /> },
 ];
@@ -68,6 +70,7 @@ const AppLayoutContent: React.FC = () => {
 
   const isCustomersActive = location.pathname === "/customers" || location.pathname === "/users";
   const isRewardProductsActive = location.pathname.startsWith("/reward-products");
+  const isRewardOrdersActive = location.pathname.startsWith("/reward-orders");
   const [customersOpen, setCustomersOpen] = React.useState(isCustomersActive);
   React.useEffect(() => {
     setCustomersOpen(isCustomersActive);
@@ -127,7 +130,13 @@ const AppLayoutContent: React.FC = () => {
               <ListItemButton
                 component={RouterLink}
                 to={item.path}
-                selected={item.path === "/reward-products" ? isRewardProductsActive : location.pathname === item.path}
+                selected={
+                  item.path === "/reward-products"
+                    ? isRewardProductsActive
+                    : item.path === "/reward-orders"
+                      ? isRewardOrdersActive
+                      : location.pathname === item.path
+                }
                 onClick={() => setMobileOpen(false)}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
