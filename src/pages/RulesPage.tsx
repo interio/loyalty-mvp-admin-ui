@@ -41,6 +41,7 @@ type RuleType = "sku_quantity" | "spend";
 type PointsRule = {
   id: string;
   tenantId: string;
+  name: string;
   ruleType: string;
   ruleVersion: number;
   active: boolean;
@@ -52,16 +53,9 @@ type PointsRule = {
   conditions?: { key: string; value?: string | null }[];
 };
 
-type RuleEditState = {
-  active: boolean;
-  priority: string;
-  effectiveFrom: string;
-  effectiveTo: string;
-  conditions: Record<string, string>;
-};
-
 export const RulesPage: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
+  const [ruleName, setRuleName] = useState("");
   const [ruleType, setRuleType] = useState<RuleType | "">("");
   const [sku, setSku] = useState("");
   const [quantityStep, setQuantityStep] = useState<number>(0);
@@ -72,7 +66,7 @@ export const RulesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
-  const [editStateById, setEditStateById] = useState<Record<string, RuleEditState>>({});
+  const [activeById, setActiveById] = useState<Record<string, boolean>>({});
   const [ruleMessages, setRuleMessages] = useState<Record<string, string>>({});
   const [ruleErrors, setRuleErrors] = useState<Record<string, string>>({});
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
@@ -86,11 +80,11 @@ export const RulesPage: React.FC = () => {
   const [loadRules] = useLazyQuery(RULES_BY_TENANT_QUERY);
   const rules: PointsRule[] = data?.pointsRulesByTenant ?? [];
 
-  const disabled = !selectedTenantId || !ruleType || loading;
+  const disabled = !selectedTenantId || !ruleName.trim() || !ruleType || loading;
 
   useEffect(() => {
     setExpandedRuleId(null);
-    setEditStateById({});
+    setActiveById({});
     setRuleMessages({});
     setRuleErrors({});
   }, [selectedTenantId]);
@@ -99,7 +93,7 @@ export const RulesPage: React.FC = () => {
     if (!expandedRuleId) return;
     const rule = rules.find((r) => r.id === expandedRuleId);
     if (!rule) return;
-    setEditStateById((prev) => (prev[rule.id] ? prev : { ...prev, [rule.id]: buildEditState(rule) }));
+    setActiveById((prev) => (rule.id in prev ? prev : { ...prev, [rule.id]: rule.active }));
   }, [expandedRuleId, rules]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,6 +112,7 @@ export const RulesPage: React.FC = () => {
         rules: [
           {
             tenantId: selectedTenantId,
+            name: ruleName.trim(),
             ruleType,
             priority: ruleType === "sku_quantity" ? 2 : 1,
             active: true,
@@ -139,6 +134,7 @@ export const RulesPage: React.FC = () => {
       }
       setMessage("Rule saved.");
       setShowForm(false);
+      setRuleName("");
       setRuleType("");
       setSku("");
       setQuantityStep(0);
@@ -213,52 +209,22 @@ export const RulesPage: React.FC = () => {
 
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
   const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
-  const toLocalInput = (value?: string | null) => (value ? new Date(value).toISOString().slice(0, 16) : "");
-
-  const buildEditState = (rule: PointsRule): RuleEditState => {
-    const conditions = (rule.conditions ?? []).reduce<Record<string, string>>((acc, kv) => {
-      acc[kv.key] = kv.value ?? "";
-      return acc;
-    }, {});
-    return {
-      active: rule.active,
-      priority: String(rule.priority ?? 0),
-      effectiveFrom: toLocalInput(rule.effectiveFrom),
-      effectiveTo: toLocalInput(rule.effectiveTo),
-      conditions,
-    };
-  };
-
-  const buildConditionsPayload = (rule: PointsRule, state: RuleEditState) => {
-    if (rule.ruleType === "sku_quantity") {
-      return {
-        sku: (state.conditions.sku ?? "").trim(),
-        quantityStep: Number(state.conditions.quantityStep || 0),
-        rewardPoints: Number(state.conditions.rewardPoints || 0),
-      };
-    }
-    return {
-      spendStep: Number(state.conditions.spendStep || 0),
-      rewardPoints: Number(state.conditions.rewardPoints || 0),
-    };
+  const getConditionValue = (rule: PointsRule, key: string) => {
+    const entry = rule.conditions?.find((c) => c.key === key);
+    return entry?.value ?? "";
   };
 
   const handleUpdateRule = async (rule: PointsRule) => {
     if (!selectedTenantId) return;
-    const state = editStateById[rule.id];
-    if (!state) return;
+    const nextActive = activeById[rule.id];
+    if (nextActive === undefined) return;
     setSavingRuleId(rule.id);
     setRuleErrors((prev) => ({ ...prev, [rule.id]: "" }));
     setRuleMessages((prev) => ({ ...prev, [rule.id]: "" }));
     try {
       const payload = {
         tenantId: selectedTenantId,
-        ruleType: rule.ruleType,
-        active: state.active,
-        priority: Number(state.priority || 0),
-        effectiveFrom: state.effectiveFrom ? new Date(state.effectiveFrom).toISOString() : undefined,
-        effectiveTo: state.effectiveTo ? new Date(state.effectiveTo).toISOString() : null,
-        conditions: buildConditionsPayload(rule, state),
+        active: nextActive,
       };
 
       const res = await fetch(`${apiBaseUrl}/api/v1/rules/points/${rule.id}`, {
@@ -271,7 +237,7 @@ export const RulesPage: React.FC = () => {
         const detail = await res.text();
         throw new Error(detail || "Failed to update rule");
       }
-      setRuleMessages((prev) => ({ ...prev, [rule.id]: "Rule updated." }));
+      setRuleMessages((prev) => ({ ...prev, [rule.id]: "Rule status updated." }));
       await loadRules({ variables: { tenantId: selectedTenantId } });
       refetch();
     } catch (err) {
@@ -298,7 +264,7 @@ export const RulesPage: React.FC = () => {
         throw new Error(detail || "Failed to delete rule");
       }
       setRuleMessages((prev) => ({ ...prev, [rule.id]: "Rule deleted." }));
-      setEditStateById((prev) => {
+      setActiveById((prev) => {
         const next = { ...prev };
         delete next[rule.id];
         return next;
@@ -337,6 +303,14 @@ export const RulesPage: React.FC = () => {
             onSubmit={handleSubmit}
             sx={{ mt: 2, mb: 3, p: 2, border: "1px solid #e0e7e2", borderRadius: 2, display: "flex", flexDirection: "column", gap: 2 }}
           >
+            <TextField
+              label="Rule name"
+              value={ruleName}
+              onChange={(e) => setRuleName(e.target.value)}
+              fullWidth
+              required
+              helperText="Give the rule a descriptive name."
+            />
             <FormControl fullWidth required>
               <InputLabel id="rule-type-label">Rule type</InputLabel>
               <Select
@@ -370,6 +344,7 @@ export const RulesPage: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell />
+                <TableCell>Name</TableCell>
                 <TableCell>Type</TableCell>
                 <TableCell>Version</TableCell>
                 <TableCell>Active</TableCell>
@@ -381,7 +356,8 @@ export const RulesPage: React.FC = () => {
             <TableBody>
               {rules.map((rule) => {
                 const isExpanded = expandedRuleId === rule.id;
-                const editState = editStateById[rule.id];
+                const activeValue = activeById[rule.id] ?? rule.active;
+                const activeDirty = activeValue !== rule.active;
                 return (
                   <React.Fragment key={rule.id}>
                     <TableRow hover>
@@ -390,6 +366,7 @@ export const RulesPage: React.FC = () => {
                           {isExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                         </IconButton>
                       </TableCell>
+                      <TableCell>{rule.name}</TableCell>
                       <TableCell>{rule.ruleType}</TableCell>
                       <TableCell>{rule.ruleVersion}</TableCell>
                       <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
@@ -398,7 +375,7 @@ export const RulesPage: React.FC = () => {
                       <TableCell>{formatDate(rule.effectiveTo)}</TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ p: 0, border: 0 }}>
+                      <TableCell colSpan={8} sx={{ p: 0, border: 0 }}>
                         <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                           <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
                             <DetailSection title="Rule details">
@@ -416,6 +393,9 @@ export const RulesPage: React.FC = () => {
                                   Updated: {formatDate(rule.updatedAt)}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  Name: {rule.name}
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                   Rule type: {rule.ruleType}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -425,169 +405,85 @@ export const RulesPage: React.FC = () => {
                                   <FormControlLabel
                                     control={
                                       <Switch
-                                        checked={!!editState?.active}
+                                        checked={activeValue}
                                         onChange={(e) =>
-                                          setEditStateById((prev) => ({
+                                          setActiveById((prev) => ({
                                             ...prev,
-                                            [rule.id]: {
-                                              ...(prev[rule.id] ?? buildEditState(rule)),
-                                              active: e.target.checked,
-                                            },
+                                            [rule.id]: e.target.checked,
                                           }))
                                         }
                                       />
                                     }
-                                    label="Active"
+                                    label={activeValue ? "Active" : "Inactive"}
                                   />
-                                  <TextField
-                                    label="Priority"
-                                    type="number"
-                                    value={editState?.priority ?? ""}
-                                    onChange={(e) =>
-                                      setEditStateById((prev) => ({
-                                        ...prev,
-                                        [rule.id]: {
-                                          ...(prev[rule.id] ?? buildEditState(rule)),
-                                          priority: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                  />
-                                  <TextField
-                                    label="Effective from"
-                                    type="datetime-local"
-                                    value={editState?.effectiveFrom ?? ""}
-                                    onChange={(e) =>
-                                      setEditStateById((prev) => ({
-                                        ...prev,
-                                        [rule.id]: {
-                                          ...(prev[rule.id] ?? buildEditState(rule)),
-                                          effectiveFrom: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                    InputLabelProps={{ shrink: true }}
-                                  />
-                                  <TextField
-                                    label="Effective to"
-                                    type="datetime-local"
-                                    value={editState?.effectiveTo ?? ""}
-                                    onChange={(e) =>
-                                      setEditStateById((prev) => ({
-                                        ...prev,
-                                        [rule.id]: {
-                                          ...(prev[rule.id] ?? buildEditState(rule)),
-                                          effectiveTo: e.target.value,
-                                        },
-                                      }))
-                                    }
-                                    InputLabelProps={{ shrink: true }}
-                                  />
+                                  <Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Priority
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {rule.priority}
+                                    </Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Effective from
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {formatDate(rule.effectiveFrom)}
+                                    </Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Effective to
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {formatDate(rule.effectiveTo)}
+                                    </Typography>
+                                  </Box>
                                 </Stack>
                               </Stack>
                             </DetailSection>
                             <DetailSection title="Conditions" sx={{ mt: 2 }}>
-                              {editState ? (
-                                rule.ruleType === "sku_quantity" ? (
-                                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                                    <TextField
-                                      label="Product SKU"
-                                      value={editState.conditions.sku ?? ""}
-                                      onChange={(e) =>
-                                        setEditStateById((prev) => ({
-                                          ...prev,
-                                          [rule.id]: {
-                                            ...(prev[rule.id] ?? buildEditState(rule)),
-                                            conditions: {
-                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
-                                              sku: e.target.value,
-                                            },
-                                          },
-                                        }))
-                                      }
-                                      fullWidth
-                                    />
-                                    <TextField
-                                      label="Quantity step (X)"
-                                      type="number"
-                                      value={editState.conditions.quantityStep ?? ""}
-                                      onChange={(e) =>
-                                        setEditStateById((prev) => ({
-                                          ...prev,
-                                          [rule.id]: {
-                                            ...(prev[rule.id] ?? buildEditState(rule)),
-                                            conditions: {
-                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
-                                              quantityStep: e.target.value,
-                                            },
-                                          },
-                                        }))
-                                      }
-                                      fullWidth
-                                    />
-                                    <TextField
-                                      label="Reward points (Y)"
-                                      type="number"
-                                      value={editState.conditions.rewardPoints ?? ""}
-                                      onChange={(e) =>
-                                        setEditStateById((prev) => ({
-                                          ...prev,
-                                          [rule.id]: {
-                                            ...(prev[rule.id] ?? buildEditState(rule)),
-                                            conditions: {
-                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
-                                              rewardPoints: e.target.value,
-                                            },
-                                          },
-                                        }))
-                                      }
-                                      fullWidth
-                                    />
-                                  </Stack>
-                                ) : (
-                                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                                    <TextField
-                                      label="Spend X (currency)"
-                                      type="number"
-                                      value={editState.conditions.spendStep ?? ""}
-                                      onChange={(e) =>
-                                        setEditStateById((prev) => ({
-                                          ...prev,
-                                          [rule.id]: {
-                                            ...(prev[rule.id] ?? buildEditState(rule)),
-                                            conditions: {
-                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
-                                              spendStep: e.target.value,
-                                            },
-                                          },
-                                        }))
-                                      }
-                                      fullWidth
-                                    />
-                                    <TextField
-                                      label="Get Y points"
-                                      type="number"
-                                      value={editState.conditions.rewardPoints ?? ""}
-                                      onChange={(e) =>
-                                        setEditStateById((prev) => ({
-                                          ...prev,
-                                          [rule.id]: {
-                                            ...(prev[rule.id] ?? buildEditState(rule)),
-                                            conditions: {
-                                              ...(prev[rule.id] ?? buildEditState(rule)).conditions,
-                                              rewardPoints: e.target.value,
-                                            },
-                                          },
-                                        }))
-                                      }
-                                      fullWidth
-                                    />
-                                  </Stack>
-                                )
+                              {rule.ruleType === "sku_quantity" ? (
+                                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                                  <TextField
+                                    label="Product SKU"
+                                    value={getConditionValue(rule, "sku")}
+                                    fullWidth
+                                    disabled
+                                  />
+                                  <TextField
+                                    label="Quantity step (X)"
+                                    type="number"
+                                    value={getConditionValue(rule, "quantityStep")}
+                                    fullWidth
+                                    disabled
+                                  />
+                                  <TextField
+                                    label="Reward points (Y)"
+                                    type="number"
+                                    value={getConditionValue(rule, "rewardPoints")}
+                                    fullWidth
+                                    disabled
+                                  />
+                                </Stack>
                               ) : (
-                                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                  Loading rule conditions...
-                                </Typography>
+                                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                                  <TextField
+                                    label="Spend X (currency)"
+                                    type="number"
+                                    value={getConditionValue(rule, "spendStep")}
+                                    fullWidth
+                                    disabled
+                                  />
+                                  <TextField
+                                    label="Get Y points"
+                                    type="number"
+                                    value={getConditionValue(rule, "rewardPoints")}
+                                    fullWidth
+                                    disabled
+                                  />
+                                </Stack>
                               )}
                             </DetailSection>
                             <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
@@ -595,9 +491,9 @@ export const RulesPage: React.FC = () => {
                                 variant="contained"
                                 sx={{ bgcolor: "#0c9b50" }}
                                 onClick={() => handleUpdateRule(rule)}
-                                disabled={savingRuleId === rule.id || deletingRuleId === rule.id}
+                                disabled={savingRuleId === rule.id || deletingRuleId === rule.id || !activeDirty}
                               >
-                                {savingRuleId === rule.id ? "Saving..." : "Save changes"}
+                                {savingRuleId === rule.id ? "Saving..." : "Save status"}
                               </Button>
                               <Button
                                 variant="outlined"
@@ -627,7 +523,7 @@ export const RulesPage: React.FC = () => {
               })}
               {selectedTenantId && !rulesLoading && rules.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <Typography variant="body2" color="text.secondary">
                       No rules found for this tenant.
                     </Typography>

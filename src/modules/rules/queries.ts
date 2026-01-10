@@ -5,6 +5,7 @@ export const RULES_BY_TENANT_QUERY = gql`
     pointsRulesByTenant(tenantId: $tenantId) {
       id
       tenantId
+      name
       ruleType
       ruleVersion
       active
