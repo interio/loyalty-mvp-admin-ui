@@ -20,6 +20,7 @@ import DashboardCustomizeIcon from "@mui/icons-material/DashboardCustomize";
 import PeopleIcon from "@mui/icons-material/People";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import StoreIcon from "@mui/icons-material/Store";
+import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
 import RuleIcon from "@mui/icons-material/Rule";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BusinessIcon from "@mui/icons-material/Business";
@@ -40,6 +41,7 @@ const navItems = [
   { label: "Tenants", path: "/tenants", icon: <BusinessIcon /> },
   { label: "Customers", path: "/customers", icon: <PeopleIcon /> },
   { label: "Products", path: "/products", icon: <StoreIcon /> },
+  { label: "Reward Products", path: "/reward-products", icon: <CardGiftcardIcon /> },
   { label: "Rules", path: "/rules", icon: <RuleIcon /> },
   { label: "Invoices", path: "/invoices", icon: <ReceiptLongIcon /> },
 ];
@@ -65,6 +67,7 @@ const AppLayoutContent: React.FC = () => {
   };
 
   const isCustomersActive = location.pathname === "/customers" || location.pathname === "/users";
+  const isRewardProductsActive = location.pathname.startsWith("/reward-products");
   const [customersOpen, setCustomersOpen] = React.useState(isCustomersActive);
   React.useEffect(() => {
     setCustomersOpen(isCustomersActive);
@@ -124,7 +127,7 @@ const AppLayoutContent: React.FC = () => {
               <ListItemButton
                 component={RouterLink}
                 to={item.path}
-                selected={location.pathname === item.path}
+                selected={item.path === "/reward-products" ? isRewardProductsActive : location.pathname === item.path}
                 onClick={() => setMobileOpen(false)}
               >
                 <ListItemIcon>{item.icon}</ListItemIcon>
