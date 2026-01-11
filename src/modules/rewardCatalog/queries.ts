@@ -20,6 +20,34 @@ export const REWARD_PRODUCTS_QUERY = gql`
   }
 `;
 
+export const REWARD_PRODUCTS_PAGE_QUERY = gql`
+  query RewardProductsPage($tenantId: UUID, $page: Int!, $pageSize: Int!) {
+    rewardProductsPage(tenantId: $tenantId, page: $page, pageSize: $pageSize) {
+      nodes {
+        id
+        tenantId
+        rewardVendor
+        sku
+        gtin
+        name
+        pointsCost
+        attributes {
+          key
+          value
+        }
+        createdAt
+        updatedAt
+      }
+      pageInfo {
+        totalCount
+        page
+        pageSize
+        totalPages
+      }
+    }
+  }
+`;
+
 export const REWARD_PRODUCTS_SEARCH_QUERY = gql`
   query RewardProductsSearch($search: String!, $tenantId: UUID) {
     rewardProductsSearch(search: $search, tenantId: $tenantId) {

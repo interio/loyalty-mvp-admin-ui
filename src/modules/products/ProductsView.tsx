@@ -11,6 +11,7 @@ import {
   IconButton,
   InputAdornment,
   LinearProgress,
+  Pagination,
   Stack,
   Table,
   TableBody,
@@ -25,7 +26,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
-import { PRODUCTS_QUERY, PRODUCTS_SEARCH_QUERY } from "./queries";
+import { PRODUCTS_PAGE_QUERY, PRODUCTS_SEARCH_QUERY } from "./queries";
 
 type Product = {
   id: string;
@@ -42,20 +43,35 @@ type Product = {
 export const ProductsView: React.FC = () => {
   const [search, setSearch] = useState("");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
-  const { data, loading, error, refetch } = useQuery(PRODUCTS_QUERY);
+  const { data, loading, error } = useQuery(PRODUCTS_PAGE_QUERY, {
+    variables: { page, pageSize },
+  });
   const [searchProducts, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(PRODUCTS_SEARCH_QUERY);
 
-  const products: Product[] = data?.products ?? [];
+  const products: Product[] = data?.productsPage?.nodes ?? [];
+  const pageInfo = data?.productsPage?.pageInfo;
   const searchedProducts: Product[] = searchData?.productsSearch ?? [];
 
   const activeProducts = search.trim() ? searchedProducts : products;
   const activeError = search.trim() ? searchError : error;
   const activeLoading = search.trim() ? searching : loading;
+  const totalLabel = search.trim()
+    ? `Matches: ${searchedProducts.length}`
+    : `Total products: ${pageInfo?.totalCount ?? 0}`;
+  const totalPages = pageInfo?.totalPages ?? 0;
 
   useEffect(() => {
     setExpandedProductId(null);
-  }, []);
+  }, [page]);
+
+  useEffect(() => {
+    if (!search.trim() && totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [search, totalPages, page]);
 
   useEffect(() => {
     const term = search.trim();
@@ -65,12 +81,6 @@ export const ProductsView: React.FC = () => {
     }, 250);
     return () => clearTimeout(handle);
   }, [search, searchProducts]);
-
-  useEffect(() => {
-    if (!search.trim()) {
-      refetch();
-    }
-  }, [search, refetch]);
 
   const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "—");
 
@@ -94,6 +104,9 @@ export const ProductsView: React.FC = () => {
               ),
             }}
           />
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+            {totalLabel}
+          </Typography>
           {activeError && <Alert severity="error">{activeError.message}</Alert>}
           {activeLoading && <LinearProgress />}
           <TableContainer>
@@ -237,6 +250,16 @@ export const ProductsView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          {!search.trim() && totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
+            </Box>
+          )}
         </Stack>
       </CardContent>
     </Card>

@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardContent,
+  Pagination,
   Stack,
   Table,
   TableBody,
@@ -16,15 +17,20 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { CREATE_TENANT_MUTATION, TENANTS_QUERY } from "./queries";
+import { CREATE_TENANT_MUTATION, TENANTS_PAGE_QUERY } from "./queries";
 
 export const TenantsView: React.FC = () => {
-  const { data, loading, error, refetch } = useQuery(TENANTS_QUERY);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  const { data, loading, error, refetch } = useQuery(TENANTS_PAGE_QUERY, {
+    variables: { page, pageSize },
+  });
   const [createTenant, { loading: creating, error: createError }] = useMutation(CREATE_TENANT_MUTATION);
   const [name, setName] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const tenants = data?.tenants ?? [];
+  const tenants = data?.tenantsPage?.nodes ?? [];
+  const pageInfo = data?.tenantsPage?.pageInfo;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +40,8 @@ export const TenantsView: React.FC = () => {
     setName("");
     setShowForm(false);
     setMessage("Tenant created.");
-    refetch();
+    setPage(1);
+    refetch({ page: 1, pageSize });
   };
 
   return (
@@ -79,6 +86,9 @@ export const TenantsView: React.FC = () => {
 
         {loading && <Typography>Loading...</Typography>}
         {error && <Alert severity="error">{error.message}</Alert>}
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 2 }}>
+          Total tenants: {pageInfo?.totalCount ?? 0}
+        </Typography>
         <TableContainer>
           <Table>
             <TableHead>
@@ -106,6 +116,16 @@ export const TenantsView: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        {(pageInfo?.totalPages ?? 0) > 1 && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <Pagination
+              count={pageInfo?.totalPages ?? 0}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              color="primary"
+            />
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

@@ -17,6 +17,7 @@ import {
   InputLabel,
   LinearProgress,
   MenuItem,
+  Pagination,
   Select,
   Stack,
   Switch,
@@ -34,7 +35,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { DetailSection } from "../components/DetailSection";
 import { apiBaseUrl } from "../config";
 import { useTenant } from "../modules/tenants/TenantContext";
-import { RULES_BY_TENANT_QUERY } from "../modules/rules/queries";
+import { RULES_BY_TENANT_PAGE_QUERY } from "../modules/rules/queries";
 
 type RuleType = "sku_quantity" | "spend";
 
@@ -72,13 +73,16 @@ export const RulesPage: React.FC = () => {
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
   const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
   const [confirmDeleteRuleId, setConfirmDeleteRuleId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
-  const { data, loading: rulesLoading, error: rulesError, refetch } = useQuery(RULES_BY_TENANT_QUERY, {
-    variables: { tenantId: selectedTenantId ?? "" },
+  const { data, loading: rulesLoading, error: rulesError, refetch } = useQuery(RULES_BY_TENANT_PAGE_QUERY, {
+    variables: { tenantId: selectedTenantId ?? "", page, pageSize },
     skip: !selectedTenantId,
   });
-  const [loadRules] = useLazyQuery(RULES_BY_TENANT_QUERY);
-  const rules: PointsRule[] = data?.pointsRulesByTenant ?? [];
+  const [loadRules] = useLazyQuery(RULES_BY_TENANT_PAGE_QUERY);
+  const rules: PointsRule[] = data?.pointsRulesByTenantPage?.nodes ?? [];
+  const pageInfo = data?.pointsRulesByTenantPage?.pageInfo;
 
   const disabled = !selectedTenantId || !ruleName.trim() || !ruleType || loading;
 
@@ -87,7 +91,14 @@ export const RulesPage: React.FC = () => {
     setActiveById({});
     setRuleMessages({});
     setRuleErrors({});
+    setPage(1);
   }, [selectedTenantId]);
+
+  useEffect(() => {
+    if ((pageInfo?.totalPages ?? 0) > 0 && page > (pageInfo?.totalPages ?? 0)) {
+      setPage(pageInfo?.totalPages ?? 1);
+    }
+  }, [pageInfo, page]);
 
   useEffect(() => {
     if (!expandedRuleId) return;
@@ -140,8 +151,9 @@ export const RulesPage: React.FC = () => {
       setQuantityStep(0);
       setRewardPoints(0);
       setSpendStep(0);
-      await loadRules({ variables: { tenantId: selectedTenantId } });
-      refetch();
+      setPage(1);
+      await loadRules({ variables: { tenantId: selectedTenantId, page: 1, pageSize } });
+      refetch({ tenantId: selectedTenantId, page: 1, pageSize });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -238,7 +250,7 @@ export const RulesPage: React.FC = () => {
         throw new Error(detail || "Failed to update rule");
       }
       setRuleMessages((prev) => ({ ...prev, [rule.id]: "Rule status updated." }));
-      await loadRules({ variables: { tenantId: selectedTenantId } });
+      await loadRules({ variables: { tenantId: selectedTenantId, page, pageSize } });
       refetch();
     } catch (err) {
       setRuleErrors((prev) => ({ ...prev, [rule.id]: (err as Error).message }));
@@ -269,7 +281,7 @@ export const RulesPage: React.FC = () => {
         delete next[rule.id];
         return next;
       });
-      await loadRules({ variables: { tenantId: selectedTenantId } });
+      await loadRules({ variables: { tenantId: selectedTenantId, page, pageSize } });
       refetch();
     } catch (err) {
       setRuleErrors((prev) => ({ ...prev, [rule.id]: (err as Error).message }));
@@ -337,6 +349,11 @@ export const RulesPage: React.FC = () => {
           </Box>
         )}
 
+        {selectedTenantId && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 2 }}>
+            Total rules: {pageInfo?.totalCount ?? 0}
+          </Typography>
+        )}
         {rulesError && <Alert severity="error">{rulesError.message}</Alert>}
         {rulesLoading && <LinearProgress />}
         <TableContainer>
@@ -533,6 +550,16 @@ export const RulesPage: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        {(pageInfo?.totalPages ?? 0) > 1 && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <Pagination
+              count={pageInfo?.totalPages ?? 0}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              color="primary"
+            />
+          </Box>
+        )}
         <Dialog
           open={!!confirmDeleteRuleId}
           onClose={() => setConfirmDeleteRuleId(null)}

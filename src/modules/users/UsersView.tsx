@@ -11,6 +11,7 @@ import {
   IconButton,
   InputAdornment,
   LinearProgress,
+  Pagination,
   Stack,
   Table,
   TableBody,
@@ -25,7 +26,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
-import { USERS_BY_TENANT_QUERY, USERS_BY_TENANT_SEARCH_QUERY } from "./queries";
+import { USERS_BY_TENANT_PAGE_QUERY, USERS_BY_TENANT_SEARCH_QUERY } from "./queries";
 import { useTenant } from "../tenants/TenantContext";
 
 type User = {
@@ -43,27 +44,46 @@ export const UsersView: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const [search, setSearch] = useState("");
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
-  const { data, loading, error, refetch } = useQuery(USERS_BY_TENANT_QUERY, {
-    variables: { tenantId: selectedTenantId ?? "" },
+  const { data, loading, error } = useQuery(USERS_BY_TENANT_PAGE_QUERY, {
+    variables: { tenantId: selectedTenantId ?? "", page, pageSize },
     skip: !selectedTenantId,
   });
   const [searchUsers, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
     USERS_BY_TENANT_SEARCH_QUERY,
   );
 
-  const users: User[] = data?.usersByTenant ?? [];
+  const users: User[] = data?.usersByTenantPage?.nodes ?? [];
+  const pageInfo = data?.usersByTenantPage?.pageInfo;
   const searchedUsers: User[] = searchData?.usersByTenantSearch ?? [];
 
   const activeUsers = search.trim() ? searchedUsers : users;
   const activeError = search.trim() ? searchError : error;
   const activeLoading = search.trim() ? searching : loading;
+  const totalLabel = search.trim()
+    ? `Matches: ${searchedUsers.length}`
+    : `Total users: ${pageInfo?.totalCount ?? 0}`;
+  const totalPages = pageInfo?.totalPages ?? 0;
 
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
 
   useEffect(() => {
     setExpandedUserId(null);
+  }, [selectedTenantId, page]);
+
+  useEffect(() => {
+    if (selectedTenantId) {
+      setPage(1);
+    }
   }, [selectedTenantId]);
+
+  useEffect(() => {
+    if (!search.trim() && totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [search, totalPages, page]);
 
   useEffect(() => {
     const term = search.trim();
@@ -74,12 +94,6 @@ export const UsersView: React.FC = () => {
     }, 250);
     return () => clearTimeout(handle);
   }, [search, selectedTenantId, searchUsers]);
-
-  useEffect(() => {
-    if (selectedTenantId && !search.trim()) {
-      refetch({ tenantId: selectedTenantId });
-    }
-  }, [selectedTenantId, search, refetch]);
 
   const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "—");
 
@@ -106,6 +120,11 @@ export const UsersView: React.FC = () => {
               ),
             }}
           />
+          {selectedTenantId && (
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+              {totalLabel}
+            </Typography>
+          )}
           {!selectedTenantId && !tenantsLoading && (
             <Typography variant="body2" color="text.secondary">
               Choose a tenant to see its users.
@@ -222,6 +241,16 @@ export const UsersView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          {!search.trim() && totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
+            </Box>
+          )}
         </Stack>
       </CardContent>
     </Card>

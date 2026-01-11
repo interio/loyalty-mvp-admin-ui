@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useQuery } from "@apollo/client";
 import {
   Alert,
@@ -8,6 +8,7 @@ import {
   CardHeader,
   Chip,
   LinearProgress,
+  Pagination,
   Table,
   TableBody,
   TableCell,
@@ -18,7 +19,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
-import { REWARD_ORDERS_BY_TENANT_QUERY } from "./queries";
+import { REWARD_ORDERS_BY_TENANT_PAGE_QUERY } from "./queries";
 
 type RewardOrder = {
   id: string;
@@ -56,14 +57,30 @@ const statusColor = (status: string) => {
 export const RewardOrdersView: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const navigate = useNavigate();
+  const [page, setPage] = React.useState(1);
+  const pageSize = 20;
 
-  const { data, loading, error } = useQuery(REWARD_ORDERS_BY_TENANT_QUERY, {
-    variables: { tenantId: selectedTenantId ?? "" },
+  const { data, loading, error } = useQuery(REWARD_ORDERS_BY_TENANT_PAGE_QUERY, {
+    variables: { tenantId: selectedTenantId ?? "", page, pageSize },
     skip: !selectedTenantId,
   });
 
-  const orders: RewardOrder[] = data?.rewardOrdersByTenant ?? [];
+  const orders: RewardOrder[] = data?.rewardOrdersByTenantPage?.nodes ?? [];
+  const pageInfo = data?.rewardOrdersByTenantPage?.pageInfo;
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
+  const totalPages = pageInfo?.totalPages ?? 0;
+
+  useEffect(() => {
+    if (selectedTenantId) {
+      setPage(1);
+    }
+  }, [selectedTenantId]);
+
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages, page]);
 
   return (
     <Card>
@@ -82,6 +99,11 @@ export const RewardOrdersView: React.FC = () => {
         {loading && <LinearProgress />}
         {!selectedTenantId && (
           <Alert severity="info">Select a tenant to view reward orders.</Alert>
+        )}
+        {selectedTenantId && (
+          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 2 }}>
+            Total orders: {pageInfo?.totalCount ?? 0}
+          </Typography>
         )}
         {selectedTenantId && !loading && orders.length === 0 && (
           <Alert severity="info">No reward orders found for this tenant.</Alert>
@@ -150,6 +172,16 @@ export const RewardOrdersView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
+        )}
+        {selectedTenantId && totalPages > 1 && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              color="primary"
+            />
+          </Box>
         )}
       </CardContent>
     </Card>

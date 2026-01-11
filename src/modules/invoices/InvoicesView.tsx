@@ -11,6 +11,7 @@ import {
   IconButton,
   InputAdornment,
   LinearProgress,
+  Pagination,
   Stack,
   Table,
   TableBody,
@@ -26,7 +27,7 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
 import { useTenant } from "../tenants/TenantContext";
-import { INVOICES_BY_TENANT_QUERY } from "./queries";
+import { INVOICES_BY_TENANT_PAGE_QUERY } from "./queries";
 
 type Invoice = {
   id: string;
@@ -51,13 +52,16 @@ export const InvoicesView: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const [search, setSearch] = useState("");
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 25;
 
-  const { data, loading, error, refetch } = useQuery(INVOICES_BY_TENANT_QUERY, {
-    variables: { tenantId: selectedTenantId ?? "", take: 200 },
+  const { data, loading, error } = useQuery(INVOICES_BY_TENANT_PAGE_QUERY, {
+    variables: { tenantId: selectedTenantId ?? "", page, pageSize },
     skip: !selectedTenantId,
   });
 
-  const invoices: Invoice[] = data?.invoicesByTenant ?? [];
+  const invoices: Invoice[] = data?.invoicesByTenantPage?.nodes ?? [];
+  const pageInfo = data?.invoicesByTenantPage?.pageInfo;
   const selectedTenantName = useMemo(
     () => tenants.find((t) => t.id === selectedTenantId)?.name,
     [tenants, selectedTenantId],
@@ -65,9 +69,15 @@ export const InvoicesView: React.FC = () => {
 
   useEffect(() => {
     if (selectedTenantId) {
-      refetch({ tenantId: selectedTenantId, take: 200 });
+      setPage(1);
     }
-  }, [selectedTenantId, refetch]);
+  }, [selectedTenantId]);
+
+  useEffect(() => {
+    if ((pageInfo?.totalPages ?? 0) > 0 && page > (pageInfo?.totalPages ?? 0)) {
+      setPage(pageInfo?.totalPages ?? 1);
+    }
+  }, [pageInfo, page]);
 
   const filteredInvoices = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -84,6 +94,9 @@ export const InvoicesView: React.FC = () => {
       return haystack.includes(term);
     });
   }, [invoices, search]);
+  const totalLabel = search.trim()
+    ? `Matches: ${filteredInvoices.length}`
+    : `Total invoices: ${pageInfo?.totalCount ?? 0}`;
 
   const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
   const parseAppliedRules = (raw?: string | null) => {
@@ -129,6 +142,11 @@ export const InvoicesView: React.FC = () => {
               ),
             }}
           />
+          {selectedTenantId && (
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+              {totalLabel}
+            </Typography>
+          )}
           {!selectedTenantId && !tenantsLoading && (
             <Typography variant="body2" color="text.secondary">
               Choose a tenant to see its invoices.
@@ -364,6 +382,16 @@ export const InvoicesView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          {!search.trim() && (pageInfo?.totalPages ?? 0) > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Pagination
+                count={pageInfo?.totalPages ?? 0}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
+            </Box>
+          )}
         </Stack>
       </CardContent>
     </Card>

@@ -36,6 +36,32 @@ export const USERS_BY_TENANT_QUERY = gql`
   }
 `;
 
+export const USERS_BY_TENANT_PAGE_QUERY = gql`
+  query UsersByTenantPage($tenantId: UUID!, $page: Int!, $pageSize: Int!) {
+    usersByTenantPage(tenantId: $tenantId, page: $page, pageSize: $pageSize) {
+      nodes {
+        id
+        email
+        role
+        customerId
+        tenantId
+        externalId
+        createdAt
+        customer {
+          id
+          name
+        }
+      }
+      pageInfo {
+        totalCount
+        page
+        pageSize
+        totalPages
+      }
+    }
+  }
+`;
+
 export const USERS_BY_TENANT_SEARCH_QUERY = gql`
   query UsersByTenantSearch($tenantId: UUID!, $search: String!) {
     usersByTenantSearch(tenantId: $tenantId, search: $search) {

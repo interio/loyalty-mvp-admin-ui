@@ -10,13 +10,14 @@ import {
   Chip,
   Grid,
   LinearProgress,
+  Pagination,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
-import { REWARD_PRODUCTS_QUERY, REWARD_PRODUCTS_SEARCH_QUERY } from "./queries";
+import { REWARD_PRODUCTS_PAGE_QUERY, REWARD_PRODUCTS_SEARCH_QUERY } from "./queries";
 
 type RewardProduct = {
   id: string;
@@ -43,21 +44,28 @@ export const RewardProductsView: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
+  const [page, setPage] = useState(1);
+  const pageSize = 18;
 
-  const { data, loading, error, refetch } = useQuery(REWARD_PRODUCTS_QUERY, {
-    variables: { tenantId: selectedTenantId ?? null },
+  const { data, loading, error } = useQuery(REWARD_PRODUCTS_PAGE_QUERY, {
+    variables: { tenantId: selectedTenantId ?? null, page, pageSize },
     skip: !selectedTenantId,
   });
   const [searchRewards, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
     REWARD_PRODUCTS_SEARCH_QUERY,
   );
 
-  const rewardProducts: RewardProduct[] = data?.rewardProducts ?? [];
+  const rewardProducts: RewardProduct[] = data?.rewardProductsPage?.nodes ?? [];
+  const pageInfo = data?.rewardProductsPage?.pageInfo;
   const searchedProducts: RewardProduct[] = searchData?.rewardProductsSearch ?? [];
 
   const activeProducts = search.trim() ? searchedProducts : rewardProducts;
   const activeError = search.trim() ? searchError : error;
   const activeLoading = search.trim() ? searching : loading;
+  const totalLabel = search.trim()
+    ? `Matches: ${searchedProducts.length}`
+    : `Total reward products: ${pageInfo?.totalCount ?? 0}`;
+  const totalPages = pageInfo?.totalPages ?? 0;
 
   const selectedTenantName = useMemo(
     () => tenants.find((t) => t.id === selectedTenantId)?.name,
@@ -66,7 +74,14 @@ export const RewardProductsView: React.FC = () => {
 
   useEffect(() => {
     setSearch("");
+    setPage(1);
   }, [selectedTenantId]);
+
+  useEffect(() => {
+    if (!search.trim() && totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [search, totalPages, page]);
 
   useEffect(() => {
     if (!selectedTenantId) return;
@@ -77,12 +92,6 @@ export const RewardProductsView: React.FC = () => {
     }, 250);
     return () => clearTimeout(handle);
   }, [search, selectedTenantId, searchRewards]);
-
-  useEffect(() => {
-    if (selectedTenantId && !search.trim()) {
-      refetch({ tenantId: selectedTenantId });
-    }
-  }, [selectedTenantId, search, refetch]);
 
   const handleOpen = (productId: string) => {
     navigate(`/reward-products/${productId}`);
@@ -106,6 +115,11 @@ export const RewardProductsView: React.FC = () => {
             onChange={(e) => setSearch(e.target.value)}
             disabled={!selectedTenantId}
           />
+          {selectedTenantId && (
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+              {totalLabel}
+            </Typography>
+          )}
           {!selectedTenantId && (
             <Alert severity="info">Select a tenant to view reward products.</Alert>
           )}
@@ -161,6 +175,16 @@ export const RewardProductsView: React.FC = () => {
               </Grid>
             )}
           </Grid>
+          {!search.trim() && totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
+            </Box>
+          )}
         </Stack>
       </CardContent>
     </Card>
