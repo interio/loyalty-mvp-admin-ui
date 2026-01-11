@@ -17,6 +17,31 @@ export const CUSTOMERS_BY_TENANT_QUERY = gql`
   }
 `;
 
+export const CUSTOMERS_BY_TENANT_PAGE_QUERY = gql`
+  query CustomersByTenantPage($tenantId: UUID!, $page: Int!, $pageSize: Int!) {
+    customersByTenantPage(tenantId: $tenantId, page: $page, pageSize: $pageSize) {
+      nodes {
+        id
+        name
+        externalId
+        contactEmail
+        tenantId
+        createdAt
+        pointsAccount {
+          balance
+          updatedAt
+        }
+      }
+      pageInfo {
+        totalCount
+        page
+        pageSize
+        totalPages
+      }
+    }
+  }
+`;
+
 export const CUSTOMERS_BY_TENANT_SEARCH_QUERY = gql`
   query CustomersByTenantSearch($tenantId: UUID!, $search: String!) {
     customersByTenantSearch(tenantId: $tenantId, search: $search) {

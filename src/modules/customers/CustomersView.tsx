@@ -16,6 +16,7 @@ import {
   IconButton,
   InputAdornment,
   LinearProgress,
+  Pagination,
   Stack,
   Table,
   TableBody,
@@ -30,7 +31,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
-import { CUSTOMERS_BY_TENANT_QUERY, CUSTOMERS_BY_TENANT_SEARCH_QUERY } from "./queries";
+import { CUSTOMERS_BY_TENANT_PAGE_QUERY, CUSTOMERS_BY_TENANT_SEARCH_QUERY } from "./queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
 import { CUSTOMER_TRANSACTIONS_QUERY, MANUAL_ADJUST_POINTS_MUTATION } from "../ledger/queries";
 import { useTenant } from "../tenants/TenantContext";
@@ -61,10 +62,13 @@ export const CustomersView: React.FC = () => {
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustCorrelationId, setAdjustCorrelationId] = useState("");
   const [adjustError, setAdjustError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { data, loading, error, refetch } = useQuery(CUSTOMERS_BY_TENANT_QUERY, {
-    variables: { tenantId: selectedTenantId ?? "" },
+  const pageSize = 25;
+  const { data, loading, error } = useQuery(CUSTOMERS_BY_TENANT_PAGE_QUERY, {
+    variables: { tenantId: selectedTenantId ?? "", page, pageSize },
     skip: !selectedTenantId,
+    notifyOnNetworkStatusChange: true,
   });
   const [loadUsers] = useLazyQuery(USERS_BY_CUSTOMER_QUERY);
   const [loadTransactions] = useLazyQuery(CUSTOMER_TRANSACTIONS_QUERY);
@@ -73,12 +77,17 @@ export const CustomersView: React.FC = () => {
     CUSTOMERS_BY_TENANT_SEARCH_QUERY,
   );
 
-  const customers: Customer[] = data?.customersByTenant ?? [];
+  const customers: Customer[] = data?.customersByTenantPage?.nodes ?? [];
+  const pageInfo = data?.customersByTenantPage?.pageInfo;
   const searchedCustomers: Customer[] = searchData?.customersByTenantSearch ?? [];
   const selectedTenantName = useMemo(
     () => tenants.find((t) => t.id === selectedTenantId)?.name,
     [tenants, selectedTenantId],
   );
+  const totalLabel = search.trim()
+    ? `Matches: ${searchedCustomers.length}`
+    : `Total customers: ${pageInfo?.totalCount ?? 0}`;
+  const totalPages = pageInfo?.totalPages ?? 0;
 
   const activeCustomers = search.trim() ? searchedCustomers : customers;
   const activeError = search.trim() ? searchError : error;
@@ -86,7 +95,19 @@ export const CustomersView: React.FC = () => {
 
   useEffect(() => {
     setExpandedCustomerId(null);
+  }, [selectedTenantId, page]);
+
+  useEffect(() => {
+    if (selectedTenantId) {
+      setPage(1);
+    }
   }, [selectedTenantId]);
+
+  useEffect(() => {
+    if (!search.trim() && totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [search, totalPages, page]);
 
   useEffect(() => {
     const term = search.trim();
@@ -98,11 +119,6 @@ export const CustomersView: React.FC = () => {
     return () => clearTimeout(handle);
   }, [search, selectedTenantId, searchCustomers]);
 
-  useEffect(() => {
-    if (selectedTenantId && !search.trim()) {
-      refetch({ tenantId: selectedTenantId });
-    }
-  }, [selectedTenantId, search, refetch]);
 
   const handleExpand = async (customerId: string) => {
     const isOpen = expandedCustomerId === customerId;
@@ -209,6 +225,11 @@ export const CustomersView: React.FC = () => {
               ),
             }}
           />
+          {selectedTenantId && (
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+              {totalLabel}
+            </Typography>
+          )}
           {!selectedTenantId && !tenantsLoading && (
             <Typography variant="body2" color="text.secondary">
               Choose a tenant to see its customers.
@@ -412,6 +433,16 @@ export const CustomersView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          {!search.trim() && totalPages > 1 && (
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
+            </Box>
+          )}
         </Stack>
       </CardContent>
       <Dialog open={adjustOpen} onClose={() => setAdjustOpen(false)} aria-labelledby="manual-adjust-title">
