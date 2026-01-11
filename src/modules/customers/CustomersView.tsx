@@ -31,10 +31,11 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
-import { CUSTOMERS_BY_TENANT_PAGE_QUERY, CUSTOMERS_BY_TENANT_SEARCH_QUERY } from "./queries";
+import { CUSTOMERS_BY_TENANT_PAGE_QUERY } from "./queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
 import { CUSTOMER_TRANSACTIONS_QUERY, MANUAL_ADJUST_POINTS_MUTATION } from "../ledger/queries";
 import { useTenant } from "../tenants/TenantContext";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type Customer = {
   id: string;
@@ -63,35 +64,33 @@ export const CustomersView: React.FC = () => {
   const [adjustCorrelationId, setAdjustCorrelationId] = useState("");
   const [adjustError, setAdjustError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
   const pageSize = 25;
   const { data, loading, error } = useQuery(CUSTOMERS_BY_TENANT_PAGE_QUERY, {
-    variables: { tenantId: selectedTenantId ?? "", page, pageSize },
+    variables: {
+      tenantId: selectedTenantId ?? "",
+      page,
+      pageSize,
+      search: debouncedSearch || null,
+    },
     skip: !selectedTenantId,
     notifyOnNetworkStatusChange: true,
   });
   const [loadUsers] = useLazyQuery(USERS_BY_CUSTOMER_QUERY);
   const [loadTransactions] = useLazyQuery(CUSTOMER_TRANSACTIONS_QUERY);
   const [manualAdjustPoints, { loading: adjusting }] = useMutation(MANUAL_ADJUST_POINTS_MUTATION);
-  const [searchCustomers, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
-    CUSTOMERS_BY_TENANT_SEARCH_QUERY,
-  );
 
   const customers: Customer[] = data?.customersByTenantPage?.nodes ?? [];
   const pageInfo = data?.customersByTenantPage?.pageInfo;
-  const searchedCustomers: Customer[] = searchData?.customersByTenantSearch ?? [];
   const selectedTenantName = useMemo(
     () => tenants.find((t) => t.id === selectedTenantId)?.name,
     [tenants, selectedTenantId],
   );
-  const totalLabel = search.trim()
-    ? `Matches: ${searchedCustomers.length}`
+  const totalLabel = debouncedSearch
+    ? `Matches: ${pageInfo?.totalCount ?? 0}`
     : `Total customers: ${pageInfo?.totalCount ?? 0}`;
   const totalPages = pageInfo?.totalPages ?? 0;
-
-  const activeCustomers = search.trim() ? searchedCustomers : customers;
-  const activeError = search.trim() ? searchError : error;
-  const activeLoading = search.trim() ? searching : loading;
 
   useEffect(() => {
     setExpandedCustomerId(null);
@@ -101,23 +100,13 @@ export const CustomersView: React.FC = () => {
     if (selectedTenantId) {
       setPage(1);
     }
-  }, [selectedTenantId]);
+  }, [selectedTenantId, debouncedSearch]);
 
   useEffect(() => {
-    if (!search.trim() && totalPages > 0 && page > totalPages) {
+    if (totalPages > 0 && page > totalPages) {
       setPage(totalPages);
     }
-  }, [search, totalPages, page]);
-
-  useEffect(() => {
-    const term = search.trim();
-    if (!selectedTenantId) return;
-    if (!term) return;
-    const handle = setTimeout(() => {
-      searchCustomers({ variables: { tenantId: selectedTenantId, search: term } });
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [search, selectedTenantId, searchCustomers]);
+  }, [totalPages, page]);
 
 
   const handleExpand = async (customerId: string) => {
@@ -235,8 +224,8 @@ export const CustomersView: React.FC = () => {
               Choose a tenant to see its customers.
             </Typography>
           )}
-          {activeError && <Alert severity="error">{activeError.message}</Alert>}
-          {activeLoading && <LinearProgress />}
+          {error && <Alert severity="error">{error.message}</Alert>}
+          {loading && <LinearProgress />}
           <TableContainer>
             <Table>
               <TableHead>
@@ -250,7 +239,7 @@ export const CustomersView: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {activeCustomers.map((customer) => {
+                {customers.map((customer) => {
                   const isExpanded = expandedCustomerId === customer.id;
                   const users = usersCache[customer.id];
                   const transactions = transactionsCache[customer.id];
@@ -421,11 +410,11 @@ export const CustomersView: React.FC = () => {
                     </React.Fragment>
                   );
                 })}
-                {selectedTenantId && !activeLoading && activeCustomers.length === 0 && (
+                {selectedTenantId && !loading && customers.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6}>
                       <Typography variant="body2" color="text.secondary">
-                        No customers match this search.
+                        {debouncedSearch ? "No customers match this search." : "No customers available."}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -433,7 +422,7 @@ export const CustomersView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          {!search.trim() && totalPages > 1 && (
+          {totalPages > 1 && (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Pagination
                 count={totalPages}

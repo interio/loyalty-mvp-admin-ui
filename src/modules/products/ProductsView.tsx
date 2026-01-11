@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useLazyQuery, useQuery } from "@apollo/client";
+import React, { useEffect, useState } from "react";
+import { useQuery } from "@apollo/client";
 import {
   Alert,
   Box,
@@ -26,7 +26,8 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
-import { PRODUCTS_PAGE_QUERY, PRODUCTS_SEARCH_QUERY } from "./queries";
+import { PRODUCTS_PAGE_QUERY } from "./queries";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type Product = {
   id: string;
@@ -45,21 +46,17 @@ export const ProductsView: React.FC = () => {
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 25;
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
   const { data, loading, error } = useQuery(PRODUCTS_PAGE_QUERY, {
-    variables: { page, pageSize },
+    variables: { page, pageSize, search: debouncedSearch || null },
   });
-  const [searchProducts, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(PRODUCTS_SEARCH_QUERY);
 
   const products: Product[] = data?.productsPage?.nodes ?? [];
   const pageInfo = data?.productsPage?.pageInfo;
-  const searchedProducts: Product[] = searchData?.productsSearch ?? [];
 
-  const activeProducts = search.trim() ? searchedProducts : products;
-  const activeError = search.trim() ? searchError : error;
-  const activeLoading = search.trim() ? searching : loading;
-  const totalLabel = search.trim()
-    ? `Matches: ${searchedProducts.length}`
+  const totalLabel = debouncedSearch
+    ? `Matches: ${pageInfo?.totalCount ?? 0}`
     : `Total products: ${pageInfo?.totalCount ?? 0}`;
   const totalPages = pageInfo?.totalPages ?? 0;
 
@@ -68,19 +65,14 @@ export const ProductsView: React.FC = () => {
   }, [page]);
 
   useEffect(() => {
-    if (!search.trim() && totalPages > 0 && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [search, totalPages, page]);
+    setPage(1);
+  }, [debouncedSearch]);
 
   useEffect(() => {
-    const term = search.trim();
-    if (!term) return;
-    const handle = setTimeout(() => {
-      searchProducts({ variables: { search: term } });
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [search, searchProducts]);
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages, page]);
 
   const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "—");
 
@@ -107,8 +99,8 @@ export const ProductsView: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
             {totalLabel}
           </Typography>
-          {activeError && <Alert severity="error">{activeError.message}</Alert>}
-          {activeLoading && <LinearProgress />}
+          {error && <Alert severity="error">{error.message}</Alert>}
+          {loading && <LinearProgress />}
           <TableContainer>
             <Table>
               <TableHead>
@@ -122,7 +114,7 @@ export const ProductsView: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {activeProducts.map((product) => {
+                {products.map((product) => {
                   const isExpanded = expandedProductId === product.id;
                   return (
                     <React.Fragment key={product.id}>
@@ -238,11 +230,11 @@ export const ProductsView: React.FC = () => {
                     </React.Fragment>
                   );
                 })}
-                {!activeLoading && activeProducts.length === 0 && (
+                {!loading && products.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6}>
                       <Typography variant="body2" color="text.secondary">
-                        No products match this search.
+                        {debouncedSearch ? "No products match this search." : "No products available."}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -250,7 +242,7 @@ export const ProductsView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          {!search.trim() && totalPages > 1 && (
+          {totalPages > 1 && (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Pagination
                 count={totalPages}

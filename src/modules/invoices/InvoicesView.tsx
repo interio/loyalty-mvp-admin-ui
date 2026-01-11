@@ -28,6 +28,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
 import { useTenant } from "../tenants/TenantContext";
 import { INVOICES_BY_TENANT_PAGE_QUERY } from "./queries";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type Invoice = {
   id: string;
@@ -54,9 +55,15 @@ export const InvoicesView: React.FC = () => {
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 25;
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
   const { data, loading, error } = useQuery(INVOICES_BY_TENANT_PAGE_QUERY, {
-    variables: { tenantId: selectedTenantId ?? "", page, pageSize },
+    variables: {
+      tenantId: selectedTenantId ?? "",
+      page,
+      pageSize,
+      search: debouncedSearch || null,
+    },
     skip: !selectedTenantId,
   });
 
@@ -71,7 +78,7 @@ export const InvoicesView: React.FC = () => {
     if (selectedTenantId) {
       setPage(1);
     }
-  }, [selectedTenantId]);
+  }, [selectedTenantId, debouncedSearch]);
 
   useEffect(() => {
     if ((pageInfo?.totalPages ?? 0) > 0 && page > (pageInfo?.totalPages ?? 0)) {
@@ -79,23 +86,8 @@ export const InvoicesView: React.FC = () => {
     }
   }, [pageInfo, page]);
 
-  const filteredInvoices = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return invoices;
-    return invoices.filter((invoice) => {
-      const haystack = [
-        invoice.invoiceId,
-        invoice.customerExternalId ?? "",
-        invoice.status,
-        invoice.error ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(term);
-    });
-  }, [invoices, search]);
-  const totalLabel = search.trim()
-    ? `Matches: ${filteredInvoices.length}`
+  const totalLabel = debouncedSearch
+    ? `Matches: ${pageInfo?.totalCount ?? 0}`
     : `Total invoices: ${pageInfo?.totalCount ?? 0}`;
 
   const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
@@ -171,7 +163,7 @@ export const InvoicesView: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredInvoices.map((invoice) => {
+                {invoices.map((invoice) => {
                   const isExpanded = expandedInvoiceId === invoice.id;
                   const lines = invoice.lines ?? [];
                   const totals = lines.reduce(
@@ -370,11 +362,11 @@ export const InvoicesView: React.FC = () => {
                     </React.Fragment>
                   );
                 })}
-                {selectedTenantId && !loading && filteredInvoices.length === 0 && (
+                {selectedTenantId && !loading && invoices.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={10}>
                       <Typography variant="body2" color="text.secondary">
-                        No invoices match this search.
+                        {debouncedSearch ? "No invoices match this search." : "No invoices found for this tenant."}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -382,7 +374,7 @@ export const InvoicesView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          {!search.trim() && (pageInfo?.totalPages ?? 0) > 1 && (
+          {(pageInfo?.totalPages ?? 0) > 1 && (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Pagination
                 count={pageInfo?.totalPages ?? 0}

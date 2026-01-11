@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useLazyQuery, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {
   Alert,
   Box,
@@ -26,8 +26,9 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
-import { USERS_BY_TENANT_PAGE_QUERY, USERS_BY_TENANT_SEARCH_QUERY } from "./queries";
+import { USERS_BY_TENANT_PAGE_QUERY } from "./queries";
 import { useTenant } from "../tenants/TenantContext";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type User = {
   id: string;
@@ -46,24 +47,23 @@ export const UsersView: React.FC = () => {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 25;
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
   const { data, loading, error } = useQuery(USERS_BY_TENANT_PAGE_QUERY, {
-    variables: { tenantId: selectedTenantId ?? "", page, pageSize },
+    variables: {
+      tenantId: selectedTenantId ?? "",
+      page,
+      pageSize,
+      search: debouncedSearch || null,
+    },
     skip: !selectedTenantId,
   });
-  const [searchUsers, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
-    USERS_BY_TENANT_SEARCH_QUERY,
-  );
 
   const users: User[] = data?.usersByTenantPage?.nodes ?? [];
   const pageInfo = data?.usersByTenantPage?.pageInfo;
-  const searchedUsers: User[] = searchData?.usersByTenantSearch ?? [];
 
-  const activeUsers = search.trim() ? searchedUsers : users;
-  const activeError = search.trim() ? searchError : error;
-  const activeLoading = search.trim() ? searching : loading;
-  const totalLabel = search.trim()
-    ? `Matches: ${searchedUsers.length}`
+  const totalLabel = debouncedSearch
+    ? `Matches: ${pageInfo?.totalCount ?? 0}`
     : `Total users: ${pageInfo?.totalCount ?? 0}`;
   const totalPages = pageInfo?.totalPages ?? 0;
 
@@ -77,23 +77,13 @@ export const UsersView: React.FC = () => {
     if (selectedTenantId) {
       setPage(1);
     }
-  }, [selectedTenantId]);
+  }, [selectedTenantId, debouncedSearch]);
 
   useEffect(() => {
-    if (!search.trim() && totalPages > 0 && page > totalPages) {
+    if (totalPages > 0 && page > totalPages) {
       setPage(totalPages);
     }
-  }, [search, totalPages, page]);
-
-  useEffect(() => {
-    const term = search.trim();
-    if (!selectedTenantId) return;
-    if (!term) return;
-    const handle = setTimeout(() => {
-      searchUsers({ variables: { tenantId: selectedTenantId, search: term } });
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [search, selectedTenantId, searchUsers]);
+  }, [totalPages, page]);
 
   const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "—");
 
@@ -130,8 +120,8 @@ export const UsersView: React.FC = () => {
               Choose a tenant to see its users.
             </Typography>
           )}
-          {activeError && <Alert severity="error">{activeError.message}</Alert>}
-          {activeLoading && <LinearProgress />}
+          {error && <Alert severity="error">{error.message}</Alert>}
+          {loading && <LinearProgress />}
           <TableContainer>
             <Table>
               <TableHead>
@@ -145,7 +135,7 @@ export const UsersView: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {activeUsers.map((user) => {
+                {users.map((user) => {
                   const isExpanded = expandedUserId === user.id;
                   return (
                     <React.Fragment key={user.id}>
@@ -229,11 +219,11 @@ export const UsersView: React.FC = () => {
                     </React.Fragment>
                   );
                 })}
-                {selectedTenantId && !activeLoading && activeUsers.length === 0 && (
+                {selectedTenantId && !loading && users.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6}>
                       <Typography variant="body2" color="text.secondary">
-                        No users match this search.
+                        {debouncedSearch ? "No users match this search." : "No users found for this tenant."}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -241,7 +231,7 @@ export const UsersView: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          {!search.trim() && totalPages > 1 && (
+          {totalPages > 1 && (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Pagination
                 count={totalPages}

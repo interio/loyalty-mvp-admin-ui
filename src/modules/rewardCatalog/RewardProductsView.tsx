@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useLazyQuery, useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client";
 import {
   Alert,
   Box,
@@ -17,7 +17,8 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
-import { REWARD_PRODUCTS_PAGE_QUERY, REWARD_PRODUCTS_SEARCH_QUERY } from "./queries";
+import { REWARD_PRODUCTS_PAGE_QUERY } from "./queries";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type RewardProduct = {
   id: string;
@@ -46,24 +47,23 @@ export const RewardProductsView: React.FC = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const pageSize = 18;
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
   const { data, loading, error } = useQuery(REWARD_PRODUCTS_PAGE_QUERY, {
-    variables: { tenantId: selectedTenantId ?? null, page, pageSize },
+    variables: {
+      tenantId: selectedTenantId ?? null,
+      page,
+      pageSize,
+      search: debouncedSearch || null,
+    },
     skip: !selectedTenantId,
   });
-  const [searchRewards, { data: searchData, loading: searching, error: searchError }] = useLazyQuery(
-    REWARD_PRODUCTS_SEARCH_QUERY,
-  );
 
   const rewardProducts: RewardProduct[] = data?.rewardProductsPage?.nodes ?? [];
   const pageInfo = data?.rewardProductsPage?.pageInfo;
-  const searchedProducts: RewardProduct[] = searchData?.rewardProductsSearch ?? [];
 
-  const activeProducts = search.trim() ? searchedProducts : rewardProducts;
-  const activeError = search.trim() ? searchError : error;
-  const activeLoading = search.trim() ? searching : loading;
-  const totalLabel = search.trim()
-    ? `Matches: ${searchedProducts.length}`
+  const totalLabel = debouncedSearch
+    ? `Matches: ${pageInfo?.totalCount ?? 0}`
     : `Total reward products: ${pageInfo?.totalCount ?? 0}`;
   const totalPages = pageInfo?.totalPages ?? 0;
 
@@ -77,21 +77,15 @@ export const RewardProductsView: React.FC = () => {
     setPage(1);
   }, [selectedTenantId]);
 
-  useEffect(() => {
-    if (!search.trim() && totalPages > 0 && page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [search, totalPages, page]);
+useEffect(() => {
+  setPage(1);
+}, [debouncedSearch]);
 
   useEffect(() => {
-    if (!selectedTenantId) return;
-    const term = search.trim();
-    if (!term) return;
-    const handle = setTimeout(() => {
-      searchRewards({ variables: { search: term, tenantId: selectedTenantId } });
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [search, selectedTenantId, searchRewards]);
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages, page]);
 
   const handleOpen = (productId: string) => {
     navigate(`/reward-products/${productId}`);
@@ -123,10 +117,10 @@ export const RewardProductsView: React.FC = () => {
           {!selectedTenantId && (
             <Alert severity="info">Select a tenant to view reward products.</Alert>
           )}
-          {activeError && <Alert severity="error">{activeError.message}</Alert>}
-          {activeLoading && <LinearProgress />}
+          {error && <Alert severity="error">{error.message}</Alert>}
+          {loading && <LinearProgress />}
           <Grid container spacing={2}>
-            {activeProducts.map((product) => {
+            {rewardProducts.map((product) => {
               const enabled = parseEnabled(product.attributes);
               return (
                 <Grid key={product.id} item xs={12} sm={6} md={4}>
@@ -169,13 +163,15 @@ export const RewardProductsView: React.FC = () => {
                 </Grid>
               );
             })}
-            {!activeLoading && selectedTenantId && activeProducts.length === 0 && (
+            {!loading && selectedTenantId && rewardProducts.length === 0 && (
               <Grid item xs={12}>
-                <Alert severity="info">No reward products match this search.</Alert>
+                <Alert severity="info">
+                  {debouncedSearch ? "No reward products match this search." : "No reward products available."}
+                </Alert>
               </Grid>
             )}
           </Grid>
-          {!search.trim() && totalPages > 1 && (
+          {totalPages > 1 && (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Pagination
                 count={totalPages}

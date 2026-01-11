@@ -18,8 +18,8 @@ export const CUSTOMERS_BY_TENANT_QUERY = gql`
 `;
 
 export const CUSTOMERS_BY_TENANT_PAGE_QUERY = gql`
-  query CustomersByTenantPage($tenantId: UUID!, $page: Int!, $pageSize: Int!) {
-    customersByTenantPage(tenantId: $tenantId, page: $page, pageSize: $pageSize) {
+  query CustomersByTenantPage($tenantId: UUID!, $page: Int!, $pageSize: Int!, $search: String) {
+    customersByTenantPage(tenantId: $tenantId, page: $page, pageSize: $pageSize, search: $search) {
       nodes {
         id
         name

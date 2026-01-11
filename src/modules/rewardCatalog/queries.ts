@@ -21,8 +21,8 @@ export const REWARD_PRODUCTS_QUERY = gql`
 `;
 
 export const REWARD_PRODUCTS_PAGE_QUERY = gql`
-  query RewardProductsPage($tenantId: UUID, $page: Int!, $pageSize: Int!) {
-    rewardProductsPage(tenantId: $tenantId, page: $page, pageSize: $pageSize) {
+  query RewardProductsPage($tenantId: UUID, $page: Int!, $pageSize: Int!, $search: String) {
+    rewardProductsPage(tenantId: $tenantId, page: $page, pageSize: $pageSize, search: $search) {
       nodes {
         id
         tenantId

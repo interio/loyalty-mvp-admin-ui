@@ -1,6 +1,6 @@
 # Loyalty MVP Admin UI
 
-React admin panel for the loyalty platform. This repo is scaffold-ready; place it alongside `loyalty-mvp-backend` and `loyalty-mvp-infra`.
+React admin panel for the loyalty platform. Place it alongside `loyalty-mvp-backend` and `loyalty-mvp-infra`.
 
 ## Local development (once scaffolded)
 - Install deps: `npm install`.
@@ -15,6 +15,7 @@ The infra repo contains Docker Compose to run the UI alongside the backend and P
 - MUI with Heineken-inspired palette.
 - Apollo Client pre-wired to `VITE_GRAPHQL_URL` (or `/graphql` when served behind a same-origin proxy).
 - Dummy SSO (replaceable with Entra later), protected routes, persistent layout with nav.
+- List views use server-side pagination and search via GraphQL `page` + `pageSize` queries (optional `search`).
 
 ## Docker
 ```

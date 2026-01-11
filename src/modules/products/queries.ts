@@ -20,8 +20,8 @@ export const PRODUCTS_QUERY = gql`
 `;
 
 export const PRODUCTS_PAGE_QUERY = gql`
-  query ProductsPage($page: Int!, $pageSize: Int!) {
-    productsPage(page: $page, pageSize: $pageSize) {
+  query ProductsPage($page: Int!, $pageSize: Int!, $search: String) {
+    productsPage(page: $page, pageSize: $pageSize, search: $search) {
       nodes {
         id
         distributorId
