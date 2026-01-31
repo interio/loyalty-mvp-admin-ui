@@ -19,6 +19,12 @@ import {
   Select,
   Stack,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
@@ -27,6 +33,7 @@ import { useTenant } from "../tenants/TenantContext";
 import {
   CREATE_RULE_ENTITY_MUTATION,
   DELETE_RULE_ENTITY_MUTATION,
+  RULE_ATTRIBUTES_QUERY,
   RULE_ENTITIES_QUERY,
   UPDATE_RULE_ENTITY_MUTATION,
 } from "./queries";
@@ -37,6 +44,18 @@ type RuleEntity = {
   code: string;
   displayName: string;
   isActive: boolean;
+  createdAt?: string;
+};
+
+type RuleAttribute = {
+  id: string;
+  entityId: string;
+  code: string;
+  displayName: string;
+  valueType: string;
+  isMultiValue: boolean;
+  isQueryable: boolean;
+  uiControl: string;
   createdAt?: string;
 };
 
@@ -58,7 +77,7 @@ export const EntityEditView: React.FC = () => {
   const [loadedEntityId, setLoadedEntityId] = useState<string | null>(null);
   const [initializedTenant, setInitializedTenant] = useState(false);
 
-  const { data, loading, error: queryError } = useQuery(RULE_ENTITIES_QUERY, {
+  const { data, loading, error: queryError, refetch: refetchEntities } = useQuery(RULE_ENTITIES_QUERY, {
     variables: { tenantId: selectedTenantId ?? null },
   });
   const entities: RuleEntity[] = data?.ruleEntities ?? [];
@@ -79,6 +98,13 @@ export const EntityEditView: React.FC = () => {
     return entities.find((e) => e.id === id) ?? null;
   }, [entities, id, isNew]);
 
+  const scopedTenantId = entity?.tenantId ?? null;
+  const { data: attributesData, loading: attributesLoading } = useQuery(RULE_ATTRIBUTES_QUERY, {
+    variables: { entityCode: entity?.code ?? "", tenantId: scopedTenantId },
+    skip: !entity?.code,
+  });
+  const attributes: RuleAttribute[] = attributesData?.ruleAttributes ?? [];
+
   useEffect(() => {
     if (!entity) return;
     if (loadedEntityId === entity.id) return;
@@ -94,6 +120,7 @@ export const EntityEditView: React.FC = () => {
       setError(queryError.message);
     }
   }, [queryError]);
+
 
   const handleSave = async () => {
     setError(null);
@@ -150,6 +177,7 @@ export const EntityEditView: React.FC = () => {
         throw new Error("Failed to update entity.");
       }
       setMessage("Entity updated.");
+      refetchEntities();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -266,6 +294,66 @@ export const EntityEditView: React.FC = () => {
               Back to entities
             </Button>
           </Stack>
+
+          <Box sx={{ mt: 3 }}>
+            <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center" mb={2} gap={2}>
+              <Typography variant="h6">Attributes</Typography>
+              <Button
+                variant="contained"
+                sx={{ bgcolor: "#0c9b50" }}
+                onClick={() => entity && navigate(`/entities/${entity.id}/attributes/new`)}
+                disabled={!entity}
+              >
+                Create new attribute
+              </Button>
+            </Stack>
+            {attributesLoading && <LinearProgress sx={{ mb: 2 }} />}
+            {!entity && (
+              <Alert severity="info">Create the entity first to manage attributes.</Alert>
+            )}
+            {entity && (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Code</TableCell>
+                      <TableCell>Display name</TableCell>
+                      <TableCell>Value type</TableCell>
+                      <TableCell>UI control</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {attributes.map((attr) => (
+                      <TableRow key={attr.id} hover>
+                        <TableCell>{attr.code}</TableCell>
+                        <TableCell>{attr.displayName}</TableCell>
+                        <TableCell>{attr.valueType}</TableCell>
+                        <TableCell>{attr.uiControl}</TableCell>
+                        <TableCell align="right">
+                          <Button
+                            variant="text"
+                            onClick={() => navigate(`/entities/${entity.id}/attributes/${attr.id}`)}
+                          >
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!attributesLoading && attributes.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5}>
+                          <Typography variant="body2" color="text.secondary">
+                            No attributes created yet.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
         </Stack>
       </CardContent>
 
