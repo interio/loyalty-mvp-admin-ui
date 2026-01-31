@@ -28,7 +28,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
 import {
   CREATE_RULE_ENTITY_MUTATION,
@@ -63,6 +63,7 @@ export const EntityEditView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isNew = !id || id === "new";
   const navigate = useNavigate();
+  const location = useLocation();
   const { tenants, selectedTenantId } = useTenant();
 
   const [saving, setSaving] = useState(false);
@@ -99,11 +100,16 @@ export const EntityEditView: React.FC = () => {
   }, [entities, id, isNew]);
 
   const scopedTenantId = entity?.tenantId ?? null;
-  const { data: attributesData, loading: attributesLoading } = useQuery(RULE_ATTRIBUTES_QUERY, {
+  const {
+    data: attributesData,
+    loading: attributesLoading,
+    refetch: refetchAttributes,
+  } = useQuery(RULE_ATTRIBUTES_QUERY, {
     variables: { entityCode: entity?.code ?? "", tenantId: scopedTenantId },
     skip: !entity?.code,
   });
   const attributes: RuleAttribute[] = attributesData?.ruleAttributes ?? [];
+  const [attributesRefreshed, setAttributesRefreshed] = useState(false);
 
   useEffect(() => {
     if (!entity) return;
@@ -120,6 +126,17 @@ export const EntityEditView: React.FC = () => {
       setError(queryError.message);
     }
   }, [queryError]);
+
+  useEffect(() => {
+    const refreshAttributes = Boolean(
+      (location.state as { refreshAttributes?: boolean } | null)?.refreshAttributes,
+    );
+    if (!refreshAttributes) return;
+    if (!entity?.code) return;
+    if (attributesRefreshed) return;
+    setAttributesRefreshed(true);
+    void refetchAttributes();
+  }, [location.state, entity?.code, attributesRefreshed, refetchAttributes]);
 
 
   const handleSave = async () => {

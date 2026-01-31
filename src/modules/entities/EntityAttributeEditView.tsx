@@ -23,7 +23,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
 import {
   CREATE_RULE_ATTRIBUTE_MUTATION,
@@ -67,6 +67,7 @@ export const EntityAttributeEditView: React.FC = () => {
   const { entityId, attributeId } = useParams<{ entityId: string; attributeId: string }>();
   const isNew = !attributeId || attributeId === "new";
   const navigate = useNavigate();
+  const location = useLocation();
   const { selectedTenantId } = useTenant();
   const apolloClient = useApolloClient();
 
@@ -82,6 +83,7 @@ export const EntityAttributeEditView: React.FC = () => {
   const [isQueryable, setIsQueryable] = useState(true);
   const [isMultiValue, setIsMultiValue] = useState(false);
   const [operators, setOperators] = useState<string[]>([]);
+  const [retriedLookup, setRetriedLookup] = useState(false);
 
   const { data: entitiesData, loading: entitiesLoading, error: entitiesError } = useQuery(RULE_ENTITIES_QUERY, {
     variables: { tenantId: selectedTenantId ?? null },
@@ -101,8 +103,10 @@ export const EntityAttributeEditView: React.FC = () => {
     data: attributesData,
     loading: attributesLoading,
     error: attributesError,
+    refetch: refetchAttributes,
   } = useQuery(RULE_ATTRIBUTES_QUERY, {
     variables: { entityCode: entity?.code ?? "", tenantId: scopedTenantId },
+    fetchPolicy: "network-only",
     skip: !entity?.code,
   });
   const attributes: RuleAttribute[] = attributesData?.ruleAttributes ?? [];
@@ -157,6 +161,22 @@ export const EntityAttributeEditView: React.FC = () => {
       cancelled = true;
     };
   }, [apolloClient, attribute]);
+
+  const justCreated = Boolean((location.state as { justCreated?: boolean } | null)?.justCreated);
+
+  useEffect(() => {
+    if (!justCreated) return;
+    setMessage("Attribute created.");
+  }, [justCreated]);
+
+  useEffect(() => {
+    if (!justCreated) return;
+    if (attributesLoading) return;
+    if (attribute) return;
+    if (retriedLookup) return;
+    setRetriedLookup(true);
+    void refetchAttributes();
+  }, [justCreated, attributesLoading, attribute, retriedLookup, refetchAttributes]);
 
   useEffect(() => {
     if (operators.length > 0) return;
@@ -215,7 +235,7 @@ export const EntityAttributeEditView: React.FC = () => {
             },
           },
         });
-        navigate(`/entities/${entity.id}/attributes/${created.id}`);
+        navigate(`/entities/${entity.id}/attributes/${created.id}`, { state: { justCreated: true } });
         return;
       }
 
@@ -264,7 +284,7 @@ export const EntityAttributeEditView: React.FC = () => {
       if (!result.data?.deleteRuleAttribute) {
         throw new Error("Failed to delete attribute.");
       }
-      navigate(`/entities/${entityId}`);
+      navigate(`/entities/${entityId}`, { state: { refreshAttributes: true } });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -287,7 +307,7 @@ export const EntityAttributeEditView: React.FC = () => {
     );
   }
 
-  if (!isNew && !attributesLoading && !attribute) {
+  if (!isNew && entity && !attributesLoading && !attribute && (!justCreated || retriedLookup)) {
     return (
       <Card>
         <CardHeader title="Attribute" subheader="Attribute not found." />
