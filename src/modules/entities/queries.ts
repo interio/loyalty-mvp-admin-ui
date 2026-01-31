@@ -71,6 +71,17 @@ export const RULE_ATTRIBUTE_OPERATORS_QUERY = gql`
   }
 `;
 
+export const RULE_ATTRIBUTE_OPTIONS_QUERY = gql`
+  query RuleAttributeOptions($attributeId: UUID!) {
+    ruleAttributeOptions(attributeId: $attributeId) {
+      id
+      attributeId
+      value
+      label
+    }
+  }
+`;
+
 export const CREATE_RULE_ATTRIBUTE_MUTATION = gql`
   mutation CreateRuleAttribute($input: CreateRuleAttributeInput!) {
     createRuleAttribute(input: $input) {
@@ -116,6 +127,34 @@ export const SET_RULE_ATTRIBUTE_OPERATORS_MUTATION = gql`
       attributeId
       operator
     }
+  }
+`;
+
+export const CREATE_RULE_ATTRIBUTE_OPTION_MUTATION = gql`
+  mutation CreateRuleAttributeOption($input: CreateRuleAttributeOptionInput!) {
+    createRuleAttributeOption(input: $input) {
+      id
+      attributeId
+      value
+      label
+    }
+  }
+`;
+
+export const UPDATE_RULE_ATTRIBUTE_OPTION_MUTATION = gql`
+  mutation UpdateRuleAttributeOption($input: UpdateRuleAttributeOptionInput!) {
+    updateRuleAttributeOption(input: $input) {
+      id
+      attributeId
+      value
+      label
+    }
+  }
+`;
+
+export const DELETE_RULE_ATTRIBUTE_OPTION_MUTATION = gql`
+  mutation DeleteRuleAttributeOption($id: UUID!) {
+    deleteRuleAttributeOption(id: $id)
   }
 `;
 

@@ -27,12 +27,16 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
 import {
   CREATE_RULE_ATTRIBUTE_MUTATION,
+  CREATE_RULE_ATTRIBUTE_OPTION_MUTATION,
+  DELETE_RULE_ATTRIBUTE_OPTION_MUTATION,
   DELETE_RULE_ATTRIBUTE_MUTATION,
   RULE_ATTRIBUTE_OPERATORS_QUERY,
+  RULE_ATTRIBUTE_OPTIONS_QUERY,
   RULE_ATTRIBUTES_QUERY,
   RULE_ENTITIES_QUERY,
   RULE_OPERATOR_CATALOG_QUERY,
   SET_RULE_ATTRIBUTE_OPERATORS_MUTATION,
+  UPDATE_RULE_ATTRIBUTE_OPTION_MUTATION,
   UPDATE_RULE_ATTRIBUTE_MUTATION,
 } from "./queries";
 
@@ -53,6 +57,13 @@ type RuleAttribute = {
   isMultiValue: boolean;
   isQueryable: boolean;
   uiControl: string;
+};
+
+type RuleAttributeOption = {
+  id: string;
+  attributeId: string;
+  value: string;
+  label: string;
 };
 
 type RuleOperator = {
@@ -83,6 +94,12 @@ export const EntityAttributeEditView: React.FC = () => {
   const [isQueryable, setIsQueryable] = useState(true);
   const [isMultiValue, setIsMultiValue] = useState(false);
   const [operators, setOperators] = useState<string[]>([]);
+  const [optionDrafts, setOptionDrafts] = useState<Record<string, { value: string; label: string }>>({});
+  const [optionValue, setOptionValue] = useState("");
+  const [optionLabel, setOptionLabel] = useState("");
+  const [optionError, setOptionError] = useState<string | null>(null);
+  const [optionMessage, setOptionMessage] = useState<string | null>(null);
+  const [savingOptionId, setSavingOptionId] = useState<string | null>(null);
   const [retriedLookup, setRetriedLookup] = useState(false);
 
   const { data: entitiesData, loading: entitiesLoading, error: entitiesError } = useQuery(RULE_ENTITIES_QUERY, {
@@ -120,6 +137,9 @@ export const EntityAttributeEditView: React.FC = () => {
   const [updateAttribute] = useMutation(UPDATE_RULE_ATTRIBUTE_MUTATION);
   const [deleteAttribute] = useMutation(DELETE_RULE_ATTRIBUTE_MUTATION);
   const [setAttributeOperators] = useMutation(SET_RULE_ATTRIBUTE_OPERATORS_MUTATION);
+  const [createOption] = useMutation(CREATE_RULE_ATTRIBUTE_OPTION_MUTATION);
+  const [updateOption] = useMutation(UPDATE_RULE_ATTRIBUTE_OPTION_MUTATION);
+  const [deleteOption] = useMutation(DELETE_RULE_ATTRIBUTE_OPTION_MUTATION);
 
   useEffect(() => {
     if (entitiesError) setError(entitiesError.message);
@@ -183,6 +203,124 @@ export const EntityAttributeEditView: React.FC = () => {
     if (operatorCatalog.length === 0) return;
     setOperators([operatorCatalog[0].value]);
   }, [operatorCatalog, operators.length]);
+
+  const {
+    data: optionsData,
+    loading: optionsLoading,
+    refetch: refetchOptions,
+  } = useQuery(RULE_ATTRIBUTE_OPTIONS_QUERY, {
+    variables: { attributeId: attribute?.id ?? "" },
+    fetchPolicy: "network-only",
+    skip: !attribute?.id,
+  });
+  const options: RuleAttributeOption[] = optionsData?.ruleAttributeOptions ?? [];
+
+  useEffect(() => {
+    if (options.length === 0) return;
+    setOptionDrafts((prev) => {
+      const next = { ...prev };
+      options.forEach((opt) => {
+        if (!next[opt.id]) {
+          next[opt.id] = { value: opt.value, label: opt.label };
+        }
+      });
+      return next;
+    });
+  }, [options]);
+
+  const isOptionsEnabled = valueType === "enum" || uiControl === "select" || uiControl === "multiselect";
+
+  const handleAddOption = async () => {
+    if (!attribute) return;
+    setOptionError(null);
+    setOptionMessage(null);
+    const trimmedValue = optionValue.trim();
+    const trimmedLabel = optionLabel.trim();
+    if (!trimmedValue || !trimmedLabel) {
+      setOptionError("Both value and label are required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await createOption({
+        variables: {
+          input: {
+            attributeId: attribute.id,
+            value: trimmedValue,
+            label: trimmedLabel,
+          },
+        },
+      });
+      if (!result.data?.createRuleAttributeOption) {
+        throw new Error("Failed to create option.");
+      }
+      setOptionValue("");
+      setOptionLabel("");
+      setOptionMessage("Option added.");
+      refetchOptions();
+    } catch (err) {
+      setOptionError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateOption = async (optionId: string) => {
+    const draft = optionDrafts[optionId];
+    if (!draft) return;
+    setOptionError(null);
+    setOptionMessage(null);
+    const trimmedValue = draft.value.trim();
+    const trimmedLabel = draft.label.trim();
+    if (!trimmedValue || !trimmedLabel) {
+      setOptionError("Both value and label are required.");
+      return;
+    }
+    setSavingOptionId(optionId);
+    try {
+      const result = await updateOption({
+        variables: {
+          input: {
+            id: optionId,
+            value: trimmedValue,
+            label: trimmedLabel,
+          },
+        },
+      });
+      if (!result.data?.updateRuleAttributeOption) {
+        throw new Error("Failed to update option.");
+      }
+      setOptionMessage("Option updated.");
+      refetchOptions();
+    } catch (err) {
+      setOptionError((err as Error).message);
+    } finally {
+      setSavingOptionId(null);
+    }
+  };
+
+  const handleDeleteOption = async (optionId: string) => {
+    setOptionError(null);
+    setOptionMessage(null);
+    setSavingOptionId(optionId);
+    try {
+      const result = await deleteOption({ variables: { id: optionId } });
+      if (!result.data?.deleteRuleAttributeOption) {
+        throw new Error("Failed to delete option.");
+      }
+      setOptionMessage("Option deleted.");
+      setOptionDrafts((prev) => {
+        const next = { ...prev };
+        delete next[optionId];
+        return next;
+      });
+      refetchOptions();
+    } catch (err) {
+      setOptionError((err as Error).message);
+    } finally {
+      setSavingOptionId(null);
+    }
+  };
 
   const handleSave = async () => {
     setError(null);
@@ -329,7 +467,7 @@ export const EntityAttributeEditView: React.FC = () => {
       />
       <CardContent>
         <Stack spacing={2}>
-          {(entitiesLoading || attributesLoading || operatorLoading) && <LinearProgress />}
+          {(entitiesLoading || attributesLoading || operatorLoading || optionsLoading) && <LinearProgress />}
           {error && <Alert severity="error">{error}</Alert>}
           {message && <Alert severity="success">{message}</Alert>}
 
@@ -407,6 +545,95 @@ export const EntityAttributeEditView: React.FC = () => {
                 />
               ))}
             </FormGroup>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
+              Options (for select/enum attributes)
+            </Typography>
+            {!isOptionsEnabled && (
+              <Alert severity="info">
+                Enable options by setting value type to enum or UI control to select/multiselect.
+              </Alert>
+            )}
+            {isOptionsEnabled && !attribute && (
+              <Alert severity="info">Save the attribute first to add options.</Alert>
+            )}
+            {isOptionsEnabled && attribute && (
+              <Stack spacing={2}>
+                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                  <TextField
+                    label="Value"
+                    value={optionValue}
+                    onChange={(e) => setOptionValue(e.target.value)}
+                    fullWidth
+                    helperText="Internal value (e.g., beer)."
+                  />
+                  <TextField
+                    label="Label"
+                    value={optionLabel}
+                    onChange={(e) => setOptionLabel(e.target.value)}
+                    fullWidth
+                    helperText="Displayed to admins (e.g., Beer)."
+                  />
+                  <Button variant="contained" onClick={handleAddOption} disabled={saving}>
+                    Add
+                  </Button>
+                </Stack>
+
+                {options.map((opt) => {
+                  const draft = optionDrafts[opt.id] ?? { value: opt.value, label: opt.label };
+                  return (
+                    <Stack key={opt.id} direction={{ xs: "column", md: "row" }} spacing={2} alignItems="center">
+                      <TextField
+                        label="Value"
+                        value={draft.value}
+                        onChange={(e) =>
+                          setOptionDrafts((prev) => ({
+                            ...prev,
+                            [opt.id]: { ...draft, value: e.target.value },
+                          }))
+                        }
+                        fullWidth
+                      />
+                      <TextField
+                        label="Label"
+                        value={draft.label}
+                        onChange={(e) =>
+                          setOptionDrafts((prev) => ({
+                            ...prev,
+                            [opt.id]: { ...draft, label: e.target.value },
+                          }))
+                        }
+                        fullWidth
+                      />
+                      <Button
+                        variant="outlined"
+                        onClick={() => handleUpdateOption(opt.id)}
+                        disabled={savingOptionId === opt.id}
+                      >
+                        {savingOptionId === opt.id ? "Saving..." : "Save"}
+                      </Button>
+                      <Button
+                        variant="text"
+                        color="error"
+                        onClick={() => handleDeleteOption(opt.id)}
+                        disabled={savingOptionId === opt.id}
+                      >
+                        Delete
+                      </Button>
+                    </Stack>
+                  );
+                })}
+                {options.length === 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    No options yet. Add the first one above.
+                  </Typography>
+                )}
+                {optionError && <Alert severity="error">{optionError}</Alert>}
+                {optionMessage && <Alert severity="success">{optionMessage}</Alert>}
+              </Stack>
+            )}
           </Box>
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
