@@ -16,6 +16,8 @@ import { RewardProductEditPage } from "./pages/RewardProductEditPage";
 import { RewardOrdersPage } from "./pages/RewardOrdersPage";
 import { RewardOrderDetailsPage } from "./pages/RewardOrderDetailsPage";
 import { RulesPage } from "./pages/RulesPage";
+import { EntitiesPage } from "./pages/EntitiesPage";
+import { EntityEditPage } from "./pages/EntityEditPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { theme } from "./theme";
@@ -41,6 +43,8 @@ const App: React.FC = () => {
                   <Route path="/reward-orders" element={<RewardOrdersPage />} />
                   <Route path="/reward-orders/:id" element={<RewardOrderDetailsPage />} />
                   <Route path="/rules" element={<RulesPage />} />
+                  <Route path="/entities" element={<EntitiesPage />} />
+                  <Route path="/entities/:id" element={<EntityEditPage />} />
                   <Route path="/invoices" element={<InvoicesPage />} />
                 </Route>
               </Route>
