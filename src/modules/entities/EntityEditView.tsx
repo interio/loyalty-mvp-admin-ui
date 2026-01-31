@@ -77,6 +77,7 @@ export const EntityEditView: React.FC = () => {
   const [tenantId, setTenantId] = useState<string>("");
   const [loadedEntityId, setLoadedEntityId] = useState<string | null>(null);
   const [initializedTenant, setInitializedTenant] = useState(false);
+  const [retriedLookup, setRetriedLookup] = useState(false);
 
   const { data, loading, error: queryError, refetch: refetchEntities } = useQuery(RULE_ENTITIES_QUERY, {
     variables: { tenantId: selectedTenantId ?? null },
@@ -98,6 +99,8 @@ export const EntityEditView: React.FC = () => {
     if (isNew || !id) return null;
     return entities.find((e) => e.id === id) ?? null;
   }, [entities, id, isNew]);
+
+  const justCreated = Boolean((location.state as { justCreated?: boolean } | null)?.justCreated);
 
   const scopedTenantId = entity?.tenantId ?? null;
   const {
@@ -126,6 +129,13 @@ export const EntityEditView: React.FC = () => {
       setError(queryError.message);
     }
   }, [queryError]);
+
+  useEffect(() => {
+    if (justCreated && !retriedLookup) {
+      setRetriedLookup(true);
+      void refetchEntities();
+    }
+  }, [justCreated, retriedLookup, refetchEntities]);
 
   useEffect(() => {
     const refreshAttributes = Boolean(
@@ -171,7 +181,7 @@ export const EntityEditView: React.FC = () => {
         if (!created) {
           throw new Error("Failed to create entity.");
         }
-        navigate(`/entities/${created.id}`);
+        navigate(`/entities/${created.id}`, { state: { justCreated: true } });
         return;
       }
 
@@ -211,7 +221,7 @@ export const EntityEditView: React.FC = () => {
       if (!result.data?.deleteRuleEntity) {
         throw new Error("Failed to delete entity.");
       }
-      navigate("/entities");
+      navigate("/entities", { state: { refreshEntities: true } });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -220,7 +230,7 @@ export const EntityEditView: React.FC = () => {
     }
   };
 
-  if (!isNew && !loading && !entity) {
+  if (!isNew && !loading && !entity && (!justCreated || retriedLookup)) {
     return (
       <Card>
         <CardHeader title="Entity" subheader="Entity not found." />

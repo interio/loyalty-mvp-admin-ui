@@ -12,7 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
 import { RULE_ENTITIES_QUERY } from "./queries";
 
@@ -27,11 +27,13 @@ type RuleEntity = {
 
 export const EntitiesView: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { tenants, selectedTenantId } = useTenant();
-  const { data, loading, error } = useQuery(RULE_ENTITIES_QUERY, {
+  const { data, loading, error, refetch } = useQuery(RULE_ENTITIES_QUERY, {
     variables: { tenantId: selectedTenantId ?? null },
   });
   const entities: RuleEntity[] = data?.ruleEntities ?? [];
+  const [entitiesRefreshed, setEntitiesRefreshed] = React.useState(false);
 
   const tenantNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -43,6 +45,16 @@ export const EntitiesView: React.FC = () => {
     if (!tenantId) return "Global";
     return tenantNameById.get(tenantId) ?? tenantId;
   };
+
+  React.useEffect(() => {
+    const refreshEntities = Boolean(
+      (location.state as { refreshEntities?: boolean } | null)?.refreshEntities,
+    );
+    if (!refreshEntities) return;
+    if (entitiesRefreshed) return;
+    setEntitiesRefreshed(true);
+    void refetch();
+  }, [location.state, entitiesRefreshed, refetch]);
 
   return (
     <Card sx={{ borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}>
