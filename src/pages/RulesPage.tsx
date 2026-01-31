@@ -58,6 +58,11 @@ export const RulesPage: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const [ruleName, setRuleName] = useState("");
   const [ruleType, setRuleType] = useState<RuleType | "">("");
+  const [ruleActive, setRuleActive] = useState(true);
+  const [priority, setPriority] = useState<number>(1);
+  const [priorityTouched, setPriorityTouched] = useState(false);
+  const [effectiveFrom, setEffectiveFrom] = useState("");
+  const [effectiveTo, setEffectiveTo] = useState("");
   const [sku, setSku] = useState("");
   const [quantityStep, setQuantityStep] = useState<number>(0);
   const [rewardPoints, setRewardPoints] = useState<number>(0);
@@ -86,6 +91,27 @@ export const RulesPage: React.FC = () => {
 
   const disabled = !selectedTenantId || !ruleName.trim() || !ruleType || loading;
 
+  const toLocalDateTimeInput = (value: Date) => {
+    const pad = (num: number) => String(num).padStart(2, "0");
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+  };
+
+  const toIsoFromInput = (value: string) => (value ? new Date(value).toISOString() : undefined);
+
+  const resetForm = () => {
+    setRuleName("");
+    setRuleType("");
+    setRuleActive(true);
+    setPriority(1);
+    setPriorityTouched(false);
+    setEffectiveFrom(toLocalDateTimeInput(new Date()));
+    setEffectiveTo("");
+    setSku("");
+    setQuantityStep(0);
+    setRewardPoints(0);
+    setSpendStep(0);
+  };
+
   useEffect(() => {
     setExpandedRuleId(null);
     setActiveById({});
@@ -93,6 +119,19 @@ export const RulesPage: React.FC = () => {
     setRuleErrors({});
     setPage(1);
   }, [selectedTenantId]);
+
+  useEffect(() => {
+    if (!showForm) return;
+    if (!effectiveFrom) {
+      setEffectiveFrom(toLocalDateTimeInput(new Date()));
+    }
+  }, [showForm, effectiveFrom]);
+
+  useEffect(() => {
+    if (!priorityTouched) {
+      setPriority(ruleType === "sku_quantity" ? 2 : 1);
+    }
+  }, [ruleType, priorityTouched]);
 
   useEffect(() => {
     if ((pageInfo?.totalPages ?? 0) > 0 && page > (pageInfo?.totalPages ?? 0)) {
@@ -125,10 +164,11 @@ export const RulesPage: React.FC = () => {
             tenantId: selectedTenantId,
             name: ruleName.trim(),
             ruleType,
-            priority: ruleType === "sku_quantity" ? 2 : 1,
-            active: true,
+            priority,
+            active: ruleActive,
             conditions,
-            effectiveFrom: new Date().toISOString(),
+            effectiveFrom: toIsoFromInput(effectiveFrom),
+            effectiveTo: toIsoFromInput(effectiveTo),
           },
         ],
       };
@@ -145,12 +185,7 @@ export const RulesPage: React.FC = () => {
       }
       setMessage("Rule saved.");
       setShowForm(false);
-      setRuleName("");
-      setRuleType("");
-      setSku("");
-      setQuantityStep(0);
-      setRewardPoints(0);
-      setSpendStep(0);
+      resetForm();
       setPage(1);
       await loadRules({ variables: { tenantId: selectedTenantId, page: 1, pageSize } });
       refetch({ tenantId: selectedTenantId, page: 1, pageSize });
@@ -337,6 +372,43 @@ export const RulesPage: React.FC = () => {
             </FormControl>
 
             {ruleFields}
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <FormControlLabel
+                control={<Switch checked={ruleActive} onChange={(e) => setRuleActive(e.target.checked)} />}
+                label={ruleActive ? "Active" : "Inactive"}
+              />
+              <TextField
+                label="Priority"
+                type="number"
+                value={priority}
+                onChange={(e) => {
+                  setPriorityTouched(true);
+                  setPriority(Number(e.target.value));
+                }}
+                fullWidth
+                inputProps={{ min: 0 }}
+                helperText="Higher priority rules run first."
+              />
+            </Stack>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="Effective from"
+                type="datetime-local"
+                value={effectiveFrom}
+                onChange={(e) => setEffectiveFrom(e.target.value)}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Effective to"
+                type="datetime-local"
+                value={effectiveTo}
+                onChange={(e) => setEffectiveTo(e.target.value)}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+            </Stack>
 
             {error && <Alert severity="error">{error}</Alert>}
             {message && <Alert severity="success">{message}</Alert>}
