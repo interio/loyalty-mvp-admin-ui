@@ -1,18 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useLazyQuery, useQuery } from "@apollo/client";
+import { useApolloClient, useLazyQuery, useQuery } from "@apollo/client";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
   CardContent,
+  Chip,
   Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   FormControlLabel,
+  FormHelperText,
   IconButton,
   InputLabel,
   LinearProgress,
@@ -20,6 +24,9 @@ import {
   Pagination,
   Select,
   Stack,
+  Step,
+  StepLabel,
+  Stepper,
   Switch,
   Table,
   TableBody,
@@ -35,9 +42,16 @@ import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import { DetailSection } from "../components/DetailSection";
 import { apiBaseUrl } from "../config";
 import { useTenant } from "../modules/tenants/TenantContext";
+import {
+  RULE_ATTRIBUTE_OPERATORS_QUERY,
+  RULE_ATTRIBUTE_OPTIONS_QUERY,
+  RULE_ATTRIBUTES_QUERY,
+  RULE_ENTITIES_QUERY,
+  RULE_OPERATOR_CATALOG_QUERY,
+} from "../modules/entities/queries";
 import { RULES_BY_TENANT_PAGE_QUERY } from "../modules/rules/queries";
 
-type RuleType = "sku_quantity" | "spend";
+type RuleType = "sku_quantity" | "spend" | "complex_rule";
 
 type PointsRule = {
   id: string;
@@ -54,8 +68,72 @@ type PointsRule = {
   conditions?: { key: string; value?: string | null }[];
 };
 
+type RuleEntity = {
+  id: string;
+  code: string;
+  displayName: string;
+};
+
+type RuleAttribute = {
+  id: string;
+  entityId: string;
+  code: string;
+  displayName: string;
+  valueType: string;
+  isMultiValue: boolean;
+  isQueryable: boolean;
+  uiControl: string;
+};
+
+type RuleAttributeOperator = {
+  id: string;
+  attributeId: string;
+  operator: string;
+};
+
+type RuleAttributeOption = {
+  id: string;
+  attributeId: string;
+  value: string;
+  label: string;
+};
+
+type RuleOperatorInfo = {
+  value: string;
+  label: string;
+};
+
+type ConditionGroup = {
+  id: string;
+  type: "group";
+  operator: "AND" | "OR";
+  children: ConditionNode[];
+};
+
+type ConditionRow = {
+  id: string;
+  type: "condition";
+  entityId?: string;
+  attributeId?: string;
+  operator?: string;
+  value?: string;
+  values?: string[];
+};
+
+type ConditionNode = ConditionGroup | ConditionRow;
+
+const makeId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const createCondition = (): ConditionRow => ({ id: makeId(), type: "condition" });
+const createGroup = (operator: "AND" | "OR" = "AND"): ConditionGroup => ({
+  id: makeId(),
+  type: "group",
+  operator,
+  children: [createCondition()],
+});
+
 export const RulesPage: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
+  const apolloClient = useApolloClient();
   const [ruleName, setRuleName] = useState("");
   const [ruleType, setRuleType] = useState<RuleType | "">("");
   const [ruleActive, setRuleActive] = useState(true);
@@ -67,6 +145,12 @@ export const RulesPage: React.FC = () => {
   const [quantityStep, setQuantityStep] = useState<number>(0);
   const [rewardPoints, setRewardPoints] = useState<number>(0);
   const [spendStep, setSpendStep] = useState<number>(0);
+  const [pointsToGrant, setPointsToGrant] = useState<number>(0);
+  const [complexStep, setComplexStep] = useState(0);
+  const [conditionTree, setConditionTree] = useState<ConditionGroup>(() => createGroup("AND"));
+  const [attributesByEntity, setAttributesByEntity] = useState<Record<string, RuleAttribute[]>>({});
+  const [operatorsByAttribute, setOperatorsByAttribute] = useState<Record<string, RuleAttributeOperator[]>>({});
+  const [optionsByAttribute, setOptionsByAttribute] = useState<Record<string, RuleAttributeOption[]>>({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +172,27 @@ export const RulesPage: React.FC = () => {
   const [loadRules] = useLazyQuery(RULES_BY_TENANT_PAGE_QUERY);
   const rules: PointsRule[] = data?.pointsRulesByTenantPage?.nodes ?? [];
   const pageInfo = data?.pointsRulesByTenantPage?.pageInfo;
+  const { data: ruleEntityData } = useQuery(RULE_ENTITIES_QUERY, {
+    variables: { tenantId: selectedTenantId ?? null },
+    skip: !selectedTenantId,
+  });
+  const ruleEntities: RuleEntity[] = ruleEntityData?.ruleEntities ?? [];
+  const { data: operatorCatalogData } = useQuery(RULE_OPERATOR_CATALOG_QUERY);
+  const operatorCatalog: RuleOperatorInfo[] = operatorCatalogData?.ruleOperatorCatalog ?? [];
+  const operatorLabelByValue = useMemo(() => {
+    const map = new Map<string, string>();
+    operatorCatalog.forEach((op) => map.set(op.value, op.label));
+    return map;
+  }, [operatorCatalog]);
+  const entityById = useMemo(() => {
+    const map = new Map<string, RuleEntity>();
+    ruleEntities.forEach((entity) => map.set(entity.id, entity));
+    return map;
+  }, [ruleEntities]);
 
-  const disabled = !selectedTenantId || !ruleName.trim() || !ruleType || loading;
+  const isComplexRule = ruleType === "complex_rule";
+  const complexDetailsValid = ruleName.trim().length > 0 && pointsToGrant > 0;
+  const disabled = !selectedTenantId || !ruleName.trim() || !ruleType || loading || (isComplexRule && !complexDetailsValid);
 
   const toLocalDateTimeInput = (value: Date) => {
     const pad = (num: number) => String(num).padStart(2, "0");
@@ -110,6 +213,9 @@ export const RulesPage: React.FC = () => {
     setQuantityStep(0);
     setRewardPoints(0);
     setSpendStep(0);
+    setPointsToGrant(0);
+    setComplexStep(0);
+    setConditionTree(createGroup("AND"));
   };
 
   useEffect(() => {
@@ -118,6 +224,10 @@ export const RulesPage: React.FC = () => {
     setRuleMessages({});
     setRuleErrors({});
     setPage(1);
+    setAttributesByEntity({});
+    setOperatorsByAttribute({});
+    setOptionsByAttribute({});
+    setConditionTree(createGroup("AND"));
   }, [selectedTenantId]);
 
   useEffect(() => {
@@ -146,11 +256,21 @@ export const RulesPage: React.FC = () => {
     setActiveById((prev) => (rule.id in prev ? prev : { ...prev, [rule.id]: rule.active }));
   }, [expandedRuleId, rules]);
 
+  useEffect(() => {
+    if (ruleType === "complex_rule") {
+      setComplexStep(0);
+    }
+  }, [ruleType]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTenantId) return;
     setMessage(null);
     setError(null);
+    if (ruleType === "complex_rule") {
+      setMessage("Complex rules are UI-only for now. Saving is not implemented yet.");
+      return;
+    }
     setLoading(true);
     try {
       const conditions =
@@ -261,6 +381,423 @@ export const RulesPage: React.FC = () => {
     return entry?.value ?? "";
   };
 
+  const loadAttributesForEntity = async (entityCode: string) => {
+    if (!selectedTenantId) return;
+    if (attributesByEntity[entityCode]) return;
+    const res = await apolloClient.query({
+      query: RULE_ATTRIBUTES_QUERY,
+      variables: { entityCode, tenantId: selectedTenantId ?? null },
+      fetchPolicy: "network-only",
+    });
+    const attrs: RuleAttribute[] = res.data?.ruleAttributes ?? [];
+    setAttributesByEntity((prev) => ({ ...prev, [entityCode]: attrs }));
+  };
+
+  const loadOperatorsForAttribute = async (attributeId: string) => {
+    if (operatorsByAttribute[attributeId]) return;
+    const res = await apolloClient.query({
+      query: RULE_ATTRIBUTE_OPERATORS_QUERY,
+      variables: { attributeId },
+      fetchPolicy: "network-only",
+    });
+    const ops: RuleAttributeOperator[] = res.data?.ruleAttributeOperators ?? [];
+    setOperatorsByAttribute((prev) => ({ ...prev, [attributeId]: ops }));
+  };
+
+  const loadOptionsForAttribute = async (attributeId: string) => {
+    if (optionsByAttribute[attributeId]) return;
+    const res = await apolloClient.query({
+      query: RULE_ATTRIBUTE_OPTIONS_QUERY,
+      variables: { attributeId },
+      fetchPolicy: "network-only",
+    });
+    const opts: RuleAttributeOption[] = res.data?.ruleAttributeOptions ?? [];
+    setOptionsByAttribute((prev) => ({ ...prev, [attributeId]: opts }));
+  };
+
+  const getAttributesForEntity = (entityId?: string) => {
+    if (!entityId) return [];
+    const entity = entityById.get(entityId);
+    if (!entity) return [];
+    return attributesByEntity[entity.code] ?? [];
+  };
+
+  const getAttributeById = (entityId: string | undefined, attributeId: string | undefined) => {
+    if (!entityId || !attributeId) return undefined;
+    return getAttributesForEntity(entityId).find((attr) => attr.id === attributeId);
+  };
+
+  const updateNode = (node: ConditionNode, targetId: string, updater: (node: ConditionNode) => ConditionNode) => {
+    if (node.id === targetId) return updater(node);
+    if (node.type === "group") {
+      return {
+        ...node,
+        children: node.children.map((child) => updateNode(child, targetId, updater)),
+      };
+    }
+    return node;
+  };
+
+  const removeNode = (node: ConditionNode, targetId: string): ConditionNode | null => {
+    if (node.id === targetId) return null;
+    if (node.type === "group") {
+      return {
+        ...node,
+        children: node.children
+          .map((child) => removeNode(child, targetId))
+          .filter((child): child is ConditionNode => child !== null),
+      };
+    }
+    return node;
+  };
+
+  const addCondition = (groupId: string) => {
+    setConditionTree((prev) =>
+      updateNode(prev, groupId, (node) =>
+        node.type === "group" ? { ...node, children: [...node.children, createCondition()] } : node,
+      ) as ConditionGroup,
+    );
+  };
+
+  const addGroup = (groupId: string, operator: "AND" | "OR") => {
+    setConditionTree((prev) =>
+      updateNode(prev, groupId, (node) =>
+        node.type === "group" ? { ...node, children: [...node.children, createGroup(operator)] } : node,
+      ) as ConditionGroup,
+    );
+  };
+
+  const updateCondition = (conditionId: string, updates: Partial<ConditionRow>) => {
+    setConditionTree((prev) =>
+      updateNode(prev, conditionId, (node) =>
+        node.type === "condition" ? { ...node, ...updates } : node,
+      ) as ConditionGroup,
+    );
+  };
+
+  const updateGroupOperator = (groupId: string, operator: "AND" | "OR") => {
+    setConditionTree((prev) =>
+      updateNode(prev, groupId, (node) =>
+        node.type === "group" ? { ...node, operator } : node,
+      ) as ConditionGroup,
+    );
+  };
+
+  const removeConditionNode = (nodeId: string) => {
+    setConditionTree((prev) => (removeNode(prev, nodeId) as ConditionGroup) ?? prev);
+  };
+
+  const renderValueInput = (condition: ConditionRow, attribute?: RuleAttribute) => {
+    if (!attribute) {
+      return <TextField label="Value" value="" disabled fullWidth />;
+    }
+
+    const isMulti = attribute.isMultiValue || attribute.uiControl === "multiselect";
+    const isEnumLike = attribute.valueType === "enum" || attribute.uiControl === "select" || attribute.uiControl === "multiselect";
+    const options = optionsByAttribute[attribute.id] ?? [];
+    const operator = condition.operator;
+
+    if (isEnumLike) {
+      if (options.length === 0) {
+        return (
+          <TextField
+            label="Value"
+            value=""
+            disabled
+            fullWidth
+            helperText="No options configured for this attribute."
+          />
+        );
+      }
+
+      if (isMulti || operator === "in" || operator === "nin") {
+        return (
+          <FormControl fullWidth>
+            <InputLabel id={`value-${condition.id}`}>Values</InputLabel>
+            <Select
+              labelId={`value-${condition.id}`}
+              label="Values"
+              multiple
+              value={condition.values ?? []}
+              onChange={(e) => updateCondition(condition.id, { values: e.target.value as string[] })}
+              renderValue={(selected) => (
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                  {(selected as string[]).map((value) => (
+                    <Chip key={value} label={options.find((o) => o.value === value)?.label ?? value} />
+                  ))}
+                </Box>
+              )}
+            >
+              {options.map((opt) => (
+                <MenuItem key={opt.id} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        );
+      }
+
+      return (
+        <FormControl fullWidth>
+          <InputLabel id={`value-${condition.id}`}>Value</InputLabel>
+          <Select
+            labelId={`value-${condition.id}`}
+            label="Value"
+            value={condition.value ?? ""}
+            onChange={(e) => updateCondition(condition.id, { value: String(e.target.value) })}
+          >
+            {options.map((opt) => (
+              <MenuItem key={opt.id} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      );
+    }
+
+    if (attribute.valueType === "bool") {
+      if (isMulti) {
+        return (
+          <FormControl fullWidth>
+            <InputLabel id={`value-${condition.id}`}>Values</InputLabel>
+            <Select
+              labelId={`value-${condition.id}`}
+              label="Values"
+              multiple
+              value={condition.values ?? []}
+              onChange={(e) => updateCondition(condition.id, { values: e.target.value as string[] })}
+            >
+              <MenuItem value="true">True</MenuItem>
+              <MenuItem value="false">False</MenuItem>
+            </Select>
+          </FormControl>
+        );
+      }
+
+      return (
+        <FormControl fullWidth>
+          <InputLabel id={`value-${condition.id}`}>Value</InputLabel>
+          <Select
+            labelId={`value-${condition.id}`}
+            label="Value"
+            value={condition.value ?? ""}
+            onChange={(e) => updateCondition(condition.id, { value: String(e.target.value) })}
+          >
+            <MenuItem value="true">True</MenuItem>
+            <MenuItem value="false">False</MenuItem>
+          </Select>
+        </FormControl>
+      );
+    }
+
+    if (isMulti || operator === "in" || operator === "nin") {
+      return (
+        <Autocomplete
+          multiple
+          freeSolo
+          options={[] as string[]}
+          value={condition.values ?? []}
+          onChange={(_, newValue) => updateCondition(condition.id, { values: newValue as string[] })}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Values"
+              type={attribute.valueType === "number" ? "number" : "text"}
+            />
+          )}
+        />
+      );
+    }
+
+    return (
+      <TextField
+        label="Value"
+        type={attribute.valueType === "number" ? "number" : "text"}
+        value={condition.value ?? ""}
+        onChange={(e) => updateCondition(condition.id, { value: e.target.value })}
+        fullWidth
+      />
+    );
+  };
+
+  const renderConditionRow = (condition: ConditionRow, depth: number) => {
+    const attributes = getAttributesForEntity(condition.entityId);
+    const attribute = getAttributeById(condition.entityId, condition.attributeId);
+    const operatorOptions = condition.attributeId
+      ? operatorsByAttribute[condition.attributeId] ?? []
+      : [];
+
+    return (
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        sx={{ alignItems: { md: "center" }, pl: depth * 2, width: "100%" }}
+      >
+        <FormControl fullWidth sx={{ flex: { xs: "1 1 100%", md: "1 1 0" }, minWidth: 180 }}>
+          <InputLabel id={`entity-${condition.id}`}>Entity</InputLabel>
+          <Select
+            labelId={`entity-${condition.id}`}
+            label="Entity"
+            value={condition.entityId ?? ""}
+            onChange={(e) => {
+              const entityId = String(e.target.value);
+              const entity = entityById.get(entityId);
+              updateCondition(condition.id, {
+                entityId,
+                attributeId: undefined,
+                operator: undefined,
+                value: "",
+                values: [],
+              });
+              if (entity?.code) {
+                void loadAttributesForEntity(entity.code);
+              }
+            }}
+          >
+            {ruleEntities.map((entity) => (
+              <MenuItem key={entity.id} value={entity.id}>
+                {entity.displayName}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl
+          fullWidth
+          disabled={!condition.entityId}
+          sx={{ flex: { xs: "1 1 100%", md: "1 1 0" }, minWidth: 180 }}
+        >
+          <InputLabel id={`attribute-${condition.id}`}>Attribute</InputLabel>
+          <Select
+            labelId={`attribute-${condition.id}`}
+            label="Attribute"
+            value={condition.attributeId ?? ""}
+            onChange={(e) => {
+              const attributeId = String(e.target.value);
+              updateCondition(condition.id, {
+                attributeId,
+                operator: undefined,
+                value: "",
+                values: [],
+              });
+              if (attributeId) {
+                void loadOperatorsForAttribute(attributeId);
+                void loadOptionsForAttribute(attributeId);
+              }
+            }}
+          >
+            {attributes.length === 0 && condition.entityId && (
+              <MenuItem value="" disabled>
+                No attributes available
+              </MenuItem>
+            )}
+            {attributes.map((attr) => (
+              <MenuItem key={attr.id} value={attr.id}>
+                {attr.displayName}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl
+          fullWidth
+          disabled={!condition.attributeId}
+          sx={{ flex: { xs: "1 1 100%", md: "1 1 0" }, minWidth: 180 }}
+        >
+          <InputLabel id={`operator-${condition.id}`}>Operator</InputLabel>
+          <Select
+            labelId={`operator-${condition.id}`}
+            label="Operator"
+            value={condition.operator ?? ""}
+            onChange={(e) => updateCondition(condition.id, { operator: String(e.target.value) })}
+          >
+            {operatorOptions.length === 0 && condition.attributeId && (
+              <MenuItem value="" disabled>
+                No operators available
+              </MenuItem>
+            )}
+            {operatorOptions.map((op) => (
+              <MenuItem key={op.id} value={op.operator}>
+                {operatorLabelByValue.get(op.operator) ?? op.operator}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Box sx={{ flex: { xs: "1 1 100%", md: "1.5 1 0" }, minWidth: 220 }}>
+          {renderValueInput(condition, attribute)}
+        </Box>
+
+        <Button
+          color="error"
+          variant="text"
+          onClick={() => removeConditionNode(condition.id)}
+          sx={{ alignSelf: { xs: "flex-start", md: "center" } }}
+        >
+          Remove
+        </Button>
+      </Stack>
+    );
+  };
+
+  const renderGroup = (group: ConditionGroup, depth = 0, isRoot = false) => (
+    <Box
+      key={group.id}
+      sx={{
+        border: "1px solid #e0e7e2",
+        borderRadius: 2,
+        p: 2,
+        mt: 1,
+        backgroundColor: depth === 0 ? "#fff" : "#f7faf8",
+      }}
+    >
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id={`group-${group.id}`}>Group logic</InputLabel>
+          <Select
+            labelId={`group-${group.id}`}
+            label="Group logic"
+            value={group.operator}
+            onChange={(e) => updateGroupOperator(group.id, e.target.value as "AND" | "OR")}
+          >
+            <MenuItem value="AND">ALL (AND)</MenuItem>
+            <MenuItem value="OR">ANY (OR)</MenuItem>
+          </Select>
+          <FormHelperText>
+            {group.operator === "AND"
+              ? "If all of these conditions are true."
+              : "If any of these conditions are true."}
+          </FormHelperText>
+        </FormControl>
+        {!isRoot && (
+          <Button color="error" variant="text" onClick={() => removeConditionNode(group.id)}>
+            Remove group
+          </Button>
+        )}
+      </Stack>
+
+      <Stack spacing={2} sx={{ mt: 2 }}>
+        {group.children.map((child) =>
+          child.type === "group" ? renderGroup(child, depth + 1) : renderConditionRow(child, depth + 1),
+        )}
+      </Stack>
+
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
+        <Button variant="outlined" onClick={() => addCondition(group.id)}>
+          Add condition
+        </Button>
+        <Button variant="outlined" onClick={() => addGroup(group.id, "AND")}>
+          Add ALL group
+        </Button>
+        <Button variant="outlined" onClick={() => addGroup(group.id, "OR")}>
+          Add ANY group
+        </Button>
+      </Stack>
+    </Box>
+  );
+
   const handleUpdateRule = async (rule: PointsRule) => {
     if (!selectedTenantId) return;
     const nextActive = activeById[rule.id];
@@ -368,56 +905,164 @@ export const RulesPage: React.FC = () => {
               >
                 <MenuItem value="spend">Spend X get Y points</MenuItem>
                 <MenuItem value="sku_quantity">SKU quantity rule</MenuItem>
+                <MenuItem value="complex_rule">Complex Rule</MenuItem>
               </Select>
             </FormControl>
 
             {ruleFields}
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <FormControlLabel
-                control={<Switch checked={ruleActive} onChange={(e) => setRuleActive(e.target.checked)} />}
-                label={ruleActive ? "Active" : "Inactive"}
-              />
-              <TextField
-                label="Priority"
-                type="number"
-                value={priority}
-                onChange={(e) => {
-                  setPriorityTouched(true);
-                  setPriority(Number(e.target.value));
-                }}
-                fullWidth
-                inputProps={{ min: 0 }}
-                helperText="Higher priority rules run first."
-              />
-            </Stack>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="Effective from"
-                type="datetime-local"
-                value={effectiveFrom}
-                onChange={(e) => setEffectiveFrom(e.target.value)}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                label="Effective to"
-                type="datetime-local"
-                value={effectiveTo}
-                onChange={(e) => setEffectiveTo(e.target.value)}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-              />
-            </Stack>
+            {!isComplexRule && (
+              <>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                  <FormControlLabel
+                    control={<Switch checked={ruleActive} onChange={(e) => setRuleActive(e.target.checked)} />}
+                    label={ruleActive ? "Active" : "Inactive"}
+                  />
+                  <TextField
+                    label="Priority"
+                    type="number"
+                    value={priority}
+                    onChange={(e) => {
+                      setPriorityTouched(true);
+                      setPriority(Number(e.target.value));
+                    }}
+                    fullWidth
+                    inputProps={{ min: 0 }}
+                    helperText="Higher priority rules run first."
+                  />
+                </Stack>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                  <TextField
+                    label="Effective from"
+                    type="datetime-local"
+                    value={effectiveFrom}
+                    onChange={(e) => setEffectiveFrom(e.target.value)}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    label="Effective to"
+                    type="datetime-local"
+                    value={effectiveTo}
+                    onChange={(e) => setEffectiveTo(e.target.value)}
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Stack>
+              </>
+            )}
+
+            {isComplexRule && (
+              <Box sx={{ border: "1px solid #e0e7e2", borderRadius: 2, p: 2 }}>
+                <Stepper activeStep={complexStep} sx={{ mb: 2 }}>
+                  <Step>
+                    <StepLabel>Rule details</StepLabel>
+                  </Step>
+                  <Step>
+                    <StepLabel>Conditions builder</StepLabel>
+                  </Step>
+                </Stepper>
+
+                {complexStep === 0 && (
+                  <Stack spacing={2}>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                      <FormControlLabel
+                        control={<Switch checked={ruleActive} onChange={(e) => setRuleActive(e.target.checked)} />}
+                        label={ruleActive ? "Active" : "Inactive"}
+                      />
+                      <TextField
+                        label="Priority"
+                        type="number"
+                        value={priority}
+                        onChange={(e) => {
+                          setPriorityTouched(true);
+                          setPriority(Number(e.target.value));
+                        }}
+                        fullWidth
+                        inputProps={{ min: 0 }}
+                        helperText="Higher priority rules run first."
+                      />
+                    </Stack>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                      <TextField
+                        label="Effective from"
+                        type="datetime-local"
+                        value={effectiveFrom}
+                        onChange={(e) => setEffectiveFrom(e.target.value)}
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                      />
+                      <TextField
+                        label="Effective to"
+                        type="datetime-local"
+                        value={effectiveTo}
+                        onChange={(e) => setEffectiveTo(e.target.value)}
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Stack>
+                    <TextField
+                      label="Points to grant"
+                      type="number"
+                      value={pointsToGrant || ""}
+                      onChange={(e) => setPointsToGrant(Number(e.target.value))}
+                      fullWidth
+                      inputProps={{ min: 0 }}
+                    />
+                  </Stack>
+                )}
+
+                {complexStep === 1 && (
+                  <Stack spacing={2}>
+                    {selectedTenantId ? (
+                      ruleEntities.length === 0 ? (
+                        <Alert severity="info">No entities available yet. Create entities and attributes first.</Alert>
+                      ) : (
+                        <Box>{renderGroup(conditionTree, 0, true)}</Box>
+                      )
+                    ) : (
+                      <Alert severity="info">Select a tenant to build conditions.</Alert>
+                    )}
+                  </Stack>
+                )}
+
+                <Divider sx={{ my: 2 }} />
+                <Alert severity="info">Complex rules are UI-only for now. Saving is not implemented yet.</Alert>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
+                  {complexStep > 0 && (
+                    <Button variant="outlined" onClick={() => setComplexStep(0)}>
+                      Back
+                    </Button>
+                  )}
+                  {complexStep === 0 && (
+                    <Button
+                      variant="contained"
+                      sx={{ bgcolor: "#0c9b50" }}
+                      onClick={() => setComplexStep(1)}
+                      disabled={!complexDetailsValid}
+                    >
+                      Next
+                    </Button>
+                  )}
+                  {complexStep === 1 && (
+                    <Button type="submit" variant="contained" sx={{ bgcolor: "#0c9b50" }} disabled={disabled}>
+                      {loading ? "Saving..." : "Save rule"}
+                    </Button>
+                  )}
+                </Stack>
+              </Box>
+            )}
 
             {error && <Alert severity="error">{error}</Alert>}
             {message && <Alert severity="success">{message}</Alert>}
 
-            <Box>
-              <Button type="submit" variant="contained" sx={{ bgcolor: "#0c9b50" }} disabled={disabled}>
-                {loading ? "Saving..." : "Save rule"}
-              </Button>
-            </Box>
+            {!isComplexRule && (
+              <Box>
+                <Button type="submit" variant="contained" sx={{ bgcolor: "#0c9b50" }} disabled={disabled}>
+                  {loading ? "Saving..." : "Save rule"}
+                </Button>
+              </Box>
+            )}
           </Box>
         )}
 
