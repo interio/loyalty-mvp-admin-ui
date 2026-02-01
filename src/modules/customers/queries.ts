@@ -58,3 +58,20 @@ export const CUSTOMERS_BY_TENANT_SEARCH_QUERY = gql`
     }
   }
 `;
+
+export const CUSTOMER_QUERY = gql`
+  query Customer($id: UUID!) {
+    customer(id: $id) {
+      id
+      name
+      externalId
+      contactEmail
+      tenantId
+      createdAt
+      pointsAccount {
+        balance
+        updatedAt
+      }
+    }
+  }
+`;

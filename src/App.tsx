@@ -9,6 +9,7 @@ import { AppLayout } from "./components/AppLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { TenantsPage } from "./pages/TenantsPage";
 import { CustomersPage } from "./pages/CustomersPage";
+import { CustomerTransactionsPage } from "./pages/CustomerTransactionsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { RewardProductsPage } from "./pages/RewardProductsPage";
@@ -39,6 +40,7 @@ const App: React.FC = () => {
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/tenants" element={<TenantsPage />} />
                   <Route path="/customers" element={<CustomersPage />} />
+                  <Route path="/customers/:customerId/transactions" element={<CustomerTransactionsPage />} />
                   <Route path="/users" element={<UsersPage />} />
                   <Route path="/products" element={<ProductsPage />} />
                   <Route path="/reward-products" element={<RewardProductsPage />} />
