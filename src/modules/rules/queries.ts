@@ -51,3 +51,26 @@ export const RULES_BY_TENANT_PAGE_QUERY = gql`
     }
   }
 `;
+
+export const RULE_CONDITION_TREE_FLAT_QUERY = gql`
+  query RuleConditionTreeFlat($ruleId: UUID!, $tenantId: UUID!) {
+    ruleConditionTreeFlat(ruleId: $ruleId, tenantId: $tenantId) {
+      rootGroupId
+      groups {
+        id
+        parentGroupId
+        logic
+        sortOrder
+      }
+      conditions {
+        id
+        groupId
+        entityCode
+        attributeCode
+        operator
+        valueJson
+        sortOrder
+      }
+    }
+  }
+`;

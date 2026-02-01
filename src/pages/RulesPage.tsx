@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useApolloClient, useLazyQuery, useQuery } from "@apollo/client";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Autocomplete,
@@ -49,7 +50,7 @@ import {
   RULE_ENTITIES_QUERY,
   RULE_OPERATOR_CATALOG_QUERY,
 } from "../modules/entities/queries";
-import { RULES_BY_TENANT_PAGE_QUERY } from "../modules/rules/queries";
+import { RULES_BY_TENANT_PAGE_QUERY, RULE_CONDITION_TREE_FLAT_QUERY } from "../modules/rules/queries";
 
 type RuleType = "sku_quantity" | "spend" | "complex_rule";
 
@@ -103,6 +104,51 @@ type RuleOperatorInfo = {
   label: string;
 };
 
+type RuleConditionTreeCondition = {
+  id: string;
+  entityCode: string;
+  attributeCode: string;
+  operator: string;
+  valueJson: string;
+  sortOrder: number;
+};
+
+type RuleConditionTreeGroupFlat = {
+  id: string;
+  parentGroupId?: string | null;
+  logic: "AND" | "OR";
+  sortOrder: number;
+};
+
+type RuleConditionTreeConditionFlat = {
+  id: string;
+  groupId: string;
+  entityCode: string;
+  attributeCode: string;
+  operator: string;
+  valueJson: string;
+  sortOrder: number;
+};
+
+type RuleConditionTreeFlat = {
+  rootGroupId: string;
+  groups: RuleConditionTreeGroupFlat[];
+  conditions: RuleConditionTreeConditionFlat[];
+};
+
+type RuleConditionTreeGroup = {
+  id: string;
+  logic: "AND" | "OR";
+  children: RuleConditionTreeNode[];
+};
+
+type RuleConditionTreeNode = {
+  type: "group" | "condition";
+  sortOrder: number;
+  condition?: RuleConditionTreeCondition | null;
+  group?: RuleConditionTreeGroup | null;
+};
+
 type ConditionGroup = {
   id: string;
   type: "group";
@@ -122,6 +168,21 @@ type ConditionRow = {
 
 type ConditionNode = ConditionGroup | ConditionRow;
 
+type ComplexRuleNodePayload = {
+  type: "group" | "condition";
+  logic?: "AND" | "OR";
+  children?: ComplexRuleNodePayload[];
+  entityCode?: string;
+  attributeCode?: string;
+  operator?: string;
+  valueJson?: unknown;
+};
+
+type ComplexRuleGroupPayload = {
+  logic: "AND" | "OR";
+  children: ComplexRuleNodePayload[];
+};
+
 const makeId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const createCondition = (): ConditionRow => ({ id: makeId(), type: "condition" });
 const createGroup = (operator: "AND" | "OR" = "AND"): ConditionGroup => ({
@@ -132,6 +193,7 @@ const createGroup = (operator: "AND" | "OR" = "AND"): ConditionGroup => ({
 });
 
 export const RulesPage: React.FC = () => {
+  const navigate = useNavigate();
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const apolloClient = useApolloClient();
   const [ruleName, setRuleName] = useState("");
@@ -162,6 +224,10 @@ export const RulesPage: React.FC = () => {
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
   const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
   const [confirmDeleteRuleId, setConfirmDeleteRuleId] = useState<string | null>(null);
+  const [conditionTreesByRule, setConditionTreesByRule] = useState<Record<string, RuleConditionTreeGroup | null>>({});
+  const [conditionTreeErrors, setConditionTreeErrors] = useState<Record<string, string>>({});
+  const [conditionTreeLoading, setConditionTreeLoading] = useState<Record<string, boolean>>({});
+  const requestedEntityCodesRef = useRef<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
@@ -179,6 +245,7 @@ export const RulesPage: React.FC = () => {
   const ruleEntities: RuleEntity[] = ruleEntityData?.ruleEntities ?? [];
   const { data: operatorCatalogData } = useQuery(RULE_OPERATOR_CATALOG_QUERY);
   const operatorCatalog: RuleOperatorInfo[] = operatorCatalogData?.ruleOperatorCatalog ?? [];
+  const [loadConditionTree] = useLazyQuery(RULE_CONDITION_TREE_FLAT_QUERY);
   const operatorLabelByValue = useMemo(() => {
     const map = new Map<string, string>();
     operatorCatalog.forEach((op) => map.set(op.value, op.label));
@@ -268,7 +335,44 @@ export const RulesPage: React.FC = () => {
     setMessage(null);
     setError(null);
     if (ruleType === "complex_rule") {
-      setMessage("Complex rules are UI-only for now. Saving is not implemented yet.");
+      const rootGroup = buildComplexPayload();
+      if (!rootGroup) return;
+      setLoading(true);
+      try {
+        const payload = {
+          tenantId: selectedTenantId,
+          name: ruleName.trim(),
+          ruleType: "complex_rule",
+          priority,
+          active: ruleActive,
+          pointsToGrant,
+          effectiveFrom: toIsoFromInput(effectiveFrom),
+          effectiveTo: toIsoFromInput(effectiveTo),
+          rootGroup,
+        };
+
+        const res = await fetch(`${apiBaseUrl}/api/v1/rules/points/complex`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const detail = await res.text();
+          throw new Error(detail || "Failed to save rule");
+        }
+
+        setMessage("Rule saved.");
+        setShowForm(false);
+        resetForm();
+        setPage(1);
+        await loadRules({ variables: { tenantId: selectedTenantId, page: 1, pageSize } });
+        refetch({ tenantId: selectedTenantId, page: 1, pageSize });
+      } catch (err) {
+        setError((err as Error).message);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
@@ -426,6 +530,266 @@ export const RulesPage: React.FC = () => {
     if (!entityId || !attributeId) return undefined;
     return getAttributesForEntity(entityId).find((attr) => attr.id === attributeId);
   };
+
+  const getEntityLabel = (entityCode: string) => {
+    if (entityCode === "rule") return "Rule";
+    const entity = ruleEntities.find((candidate) => candidate.code === entityCode);
+    return entity?.displayName ?? entityCode;
+  };
+
+  const getAttributeLabel = (entityCode: string, attributeCode: string) => {
+    if (entityCode === "rule" && attributeCode === "rewardPoints") return "Points to grant";
+    const attrs = attributesByEntity[entityCode] ?? [];
+    const attr = attrs.find((candidate) => candidate.code === attributeCode);
+    return attr?.displayName ?? attributeCode;
+  };
+
+  const formatValueJson = (raw: string) => {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.join(", ");
+      if (parsed === null || parsed === undefined) return "—";
+      if (typeof parsed === "object") return JSON.stringify(parsed);
+      return String(parsed);
+    } catch {
+      return raw;
+    }
+  };
+
+  const collectEntityCodes = (group: RuleConditionTreeGroup, target: Set<string>) => {
+    group.children.forEach((node) => {
+      if (node.type === "group" && node.group) {
+        collectEntityCodes(node.group, target);
+      } else if (node.type === "condition" && node.condition?.entityCode) {
+        target.add(node.condition.entityCode);
+      }
+    });
+  };
+
+  const normalizeScalarValue = (raw: string, attribute: RuleAttribute, errors: string[]) => {
+    const trimmed = raw.trim();
+    if (trimmed.length === 0) {
+      errors.push("Value is required for every condition.");
+      return null;
+    }
+    switch (attribute.valueType) {
+      case "number": {
+        const num = Number(trimmed);
+        if (Number.isNaN(num)) {
+          errors.push(`"${attribute.displayName}" expects a numeric value.`);
+          return null;
+        }
+        return num;
+      }
+      case "bool":
+        if (trimmed === "true") return true;
+        if (trimmed === "false") return false;
+        errors.push(`"${attribute.displayName}" expects true or false.`);
+        return null;
+      default:
+        return trimmed;
+    }
+  };
+
+  const buildComplexPayload = (): ComplexRuleGroupPayload | null => {
+    const errors: string[] = [];
+
+    const buildNode = (node: ConditionNode): ComplexRuleNodePayload | null => {
+      if (node.type === "group") {
+        const children = node.children.map(buildNode).filter(Boolean) as ComplexRuleNodePayload[];
+        if (children.length === 0) {
+          errors.push("Each group must contain at least one condition.");
+          return null;
+        }
+        return {
+          type: "group",
+          logic: node.operator,
+          children,
+        };
+      }
+
+      if (!node.entityId || !node.attributeId || !node.operator) {
+        errors.push("All conditions must include entity, attribute, and operator.");
+        return null;
+      }
+
+      const entity = entityById.get(node.entityId);
+      const attribute = getAttributeById(node.entityId, node.attributeId);
+      if (!entity || !attribute) {
+        errors.push("Selected entity or attribute is not available.");
+        return null;
+      }
+
+      const hasValues = (node.values ?? []).length > 0;
+      const valueJson = hasValues
+        ? (node.values ?? [])
+            .map((value) => normalizeScalarValue(String(value), attribute, errors))
+            .filter((value) => value !== null)
+        : normalizeScalarValue(String(node.value ?? ""), attribute, errors);
+
+      if (valueJson === null || (Array.isArray(valueJson) && valueJson.length === 0)) {
+        errors.push("Value is required for every condition.");
+        return null;
+      }
+
+      return {
+        type: "condition",
+        entityCode: entity.code,
+        attributeCode: attribute.code,
+        operator: node.operator,
+        valueJson,
+      };
+    };
+
+    const rootPayload = buildNode(conditionTree);
+    if (!rootPayload || rootPayload.type !== "group") {
+      errors.push("Root group is missing.");
+    }
+
+    if (errors.length > 0) {
+      setError(errors[0]);
+      return null;
+    }
+
+    return {
+      logic: conditionTree.operator,
+      children: rootPayload.type === "group" ? rootPayload.children ?? [] : [],
+    };
+  };
+
+  const buildTreeFromFlat = (flat: RuleConditionTreeFlat | null) => {
+    if (!flat) return null;
+    const groupById = new Map<string, RuleConditionTreeGroup>();
+    flat.groups.forEach((group) => {
+      groupById.set(group.id, { id: group.id, logic: group.logic, children: [] });
+    });
+
+    const nodesByGroup = new Map<string, RuleConditionTreeNode[]>();
+    const pushNode = (groupId: string, node: RuleConditionTreeNode) => {
+      const existing = nodesByGroup.get(groupId) ?? [];
+      existing.push(node);
+      nodesByGroup.set(groupId, existing);
+    };
+
+    flat.groups.forEach((group) => {
+      if (!group.parentGroupId) return;
+      const childGroup = groupById.get(group.id);
+      if (!childGroup) return;
+      pushNode(group.parentGroupId, {
+        type: "group",
+        sortOrder: group.sortOrder,
+        group: childGroup,
+      });
+    });
+
+    flat.conditions.forEach((condition) => {
+      pushNode(condition.groupId, {
+        type: "condition",
+        sortOrder: condition.sortOrder,
+        condition: {
+          id: condition.id,
+          entityCode: condition.entityCode,
+          attributeCode: condition.attributeCode,
+          operator: condition.operator,
+          valueJson: condition.valueJson,
+          sortOrder: condition.sortOrder,
+        },
+      });
+    });
+
+    groupById.forEach((group, groupId) => {
+      const nodes = nodesByGroup.get(groupId) ?? [];
+      group.children = nodes.sort((a, b) => a.sortOrder - b.sortOrder);
+    });
+
+    return groupById.get(flat.rootGroupId) ?? null;
+  };
+
+  useEffect(() => {
+    if (!expandedRuleId || !selectedTenantId) return;
+    const rule = rules.find((candidate) => candidate.id === expandedRuleId);
+    if (!rule || rule.ruleType !== "complex_rule") return;
+    if (conditionTreesByRule[rule.id] || conditionTreeLoading[rule.id]) return;
+
+    setConditionTreeLoading((prev) => ({ ...prev, [rule.id]: true }));
+    setConditionTreeErrors((prev) => ({ ...prev, [rule.id]: "" }));
+    loadConditionTree({ variables: { ruleId: rule.id, tenantId: selectedTenantId }, fetchPolicy: "network-only" })
+      .then((res) => {
+        const flat = res.data?.ruleConditionTreeFlat ?? null;
+        const tree = buildTreeFromFlat(flat);
+        setConditionTreesByRule((prev) => ({ ...prev, [rule.id]: tree }));
+        if (tree) {
+          const codes = new Set<string>();
+          collectEntityCodes(tree, codes);
+          codes.forEach((code) => {
+            if (code === "rule" || requestedEntityCodesRef.current.has(code)) return;
+            requestedEntityCodesRef.current.add(code);
+            void loadAttributesForEntity(code);
+          });
+        }
+      })
+      .catch((err) => {
+        setConditionTreeErrors((prev) => ({ ...prev, [rule.id]: (err as Error).message }));
+      })
+      .finally(() => {
+        setConditionTreeLoading((prev) => ({ ...prev, [rule.id]: false }));
+      });
+  }, [
+    expandedRuleId,
+    selectedTenantId,
+    rules,
+    conditionTreesByRule,
+    conditionTreeLoading,
+    loadConditionTree,
+  ]);
+
+  const renderConditionTree = (group: RuleConditionTreeGroup, depth = 0) => (
+    <Box
+      key={group.id}
+      sx={{
+        border: "1px solid #e0e7e2",
+        borderRadius: 2,
+        p: 2,
+        mt: 1,
+        backgroundColor: depth === 0 ? "#fff" : "#f7faf8",
+      }}
+    >
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
+        <Chip label={group.logic === "AND" ? "ALL" : "ANY"} size="small" />
+        <Typography variant="body2" color="text.secondary">
+          {group.logic === "AND" ? "If all of these conditions are true." : "If any of these conditions are true."}
+        </Typography>
+      </Stack>
+      <Stack spacing={1.5} sx={{ mt: 1.5 }}>
+        {group.children.map((node, index) => {
+          if (node.type === "group" && node.group) {
+            return renderConditionTree(node.group, depth + 1);
+          }
+          if (node.type === "condition" && node.condition) {
+            const condition = node.condition;
+            const operatorLabel = operatorLabelByValue.get(condition.operator) ?? condition.operator;
+            return (
+              <Stack
+                key={`${condition.id}-${index}`}
+                direction={{ xs: "column", md: "row" }}
+                spacing={1}
+                sx={{ pl: depth * 1.5 }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {getEntityLabel(condition.entityCode)}.{getAttributeLabel(condition.entityCode, condition.attributeCode)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {operatorLabel}
+                </Typography>
+                <Typography variant="body2">{formatValueJson(condition.valueJson)}</Typography>
+              </Stack>
+            );
+          }
+          return null;
+        })}
+      </Stack>
+    </Box>
+  );
 
   const updateNode = (node: ConditionNode, targetId: string, updater: (node: ConditionNode) => ConditionNode) => {
     if (node.id === targetId) return updater(node);
@@ -1027,7 +1391,6 @@ export const RulesPage: React.FC = () => {
                 )}
 
                 <Divider sx={{ my: 2 }} />
-                <Alert severity="info">Complex rules are UI-only for now. Saving is not implemented yet.</Alert>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
                   {complexStep > 0 && (
                     <Button variant="outlined" onClick={() => setComplexStep(0)}>
@@ -1178,7 +1541,17 @@ export const RulesPage: React.FC = () => {
                               </Stack>
                             </DetailSection>
                             <DetailSection title="Conditions" sx={{ mt: 2 }}>
-                              {rule.ruleType === "sku_quantity" ? (
+                              {rule.ruleType === "complex_rule" ? (
+                                conditionTreeLoading[rule.id] ? (
+                                  <LinearProgress />
+                                ) : conditionTreeErrors[rule.id] ? (
+                                  <Alert severity="error">{conditionTreeErrors[rule.id]}</Alert>
+                                ) : conditionTreesByRule[rule.id] ? (
+                                  renderConditionTree(conditionTreesByRule[rule.id] as RuleConditionTreeGroup)
+                                ) : (
+                                  <Alert severity="info">No condition tree found for this rule.</Alert>
+                                )
+                              ) : rule.ruleType === "sku_quantity" ? (
                                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                                   <TextField
                                     label="Product SKU"
@@ -1229,6 +1602,15 @@ export const RulesPage: React.FC = () => {
                               >
                                 {savingRuleId === rule.id ? "Saving..." : "Save status"}
                               </Button>
+                              {rule.ruleType === "complex_rule" && (
+                                <Button
+                                  variant="outlined"
+                                  onClick={() => navigate(`/rules/complex/${rule.id}`)}
+                                  disabled={savingRuleId === rule.id || deletingRuleId === rule.id}
+                                >
+                                  Open complex rule
+                                </Button>
+                              )}
                               <Button
                                 variant="outlined"
                                 color="error"
