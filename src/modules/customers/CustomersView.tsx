@@ -65,6 +65,7 @@ export const CustomersView: React.FC = () => {
   const [adjustCustomerId, setAdjustCustomerId] = useState<string | null>(null);
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustCorrelationId, setAdjustCorrelationId] = useState("");
+  const [adjustComment, setAdjustComment] = useState("");
   const [adjustError, setAdjustError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
@@ -145,6 +146,7 @@ export const CustomersView: React.FC = () => {
     setAdjustCustomerId(customerId);
     setAdjustAmount("");
     setAdjustCorrelationId("");
+    setAdjustComment("");
     setAdjustError(null);
     setAdjustOpen(true);
   };
@@ -164,6 +166,7 @@ export const CustomersView: React.FC = () => {
             customerId: adjustCustomerId,
             amount: amountValue,
             actorEmail: user?.email ?? null,
+            comment: adjustComment.trim() || null,
             correlationId: adjustCorrelationId.trim() || null,
           },
         },
@@ -389,6 +392,14 @@ export const CustomersView: React.FC = () => {
               label="Correlation ID (optional)"
               value={adjustCorrelationId}
               onChange={(e) => setAdjustCorrelationId(e.target.value)}
+            />
+            <TextField
+              label="Comment"
+              value={adjustComment}
+              onChange={(e) => setAdjustComment(e.target.value)}
+              placeholder="Why was this adjustment made?"
+              multiline
+              minRows={3}
             />
             {adjustError && <Alert severity="error">{adjustError}</Alert>}
           </Stack>

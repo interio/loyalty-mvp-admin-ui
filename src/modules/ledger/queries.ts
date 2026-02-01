@@ -7,6 +7,7 @@ export const CUSTOMER_TRANSACTIONS_QUERY = gql`
       customerId
       actorUserId
       actorEmail
+      comment
       amount
       reason
       correlationId

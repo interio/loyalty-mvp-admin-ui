@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -8,6 +8,10 @@ import {
   Card,
   CardContent,
   CardHeader,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   LinearProgress,
   Stack,
   Table,
@@ -15,12 +19,14 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from "@mui/material";
 import { DetailSection } from "../components/DetailSection";
+import { useAuth } from "../auth/AuthContext";
 import { useTenant } from "../modules/tenants/TenantContext";
 import { CUSTOMER_QUERY } from "../modules/customers/queries";
-import { CUSTOMER_TRANSACTIONS_QUERY } from "../modules/ledger/queries";
+import { CUSTOMER_TRANSACTIONS_QUERY, MANUAL_ADJUST_POINTS_MUTATION } from "../modules/ledger/queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../modules/users/queries";
 
 type Transaction = {
@@ -28,6 +34,7 @@ type Transaction = {
   customerId: string;
   actorUserId?: string | null;
   actorEmail?: string | null;
+  comment?: string | null;
   amount: number;
   reason: string;
   correlationId?: string | null;
@@ -38,11 +45,18 @@ type Transaction = {
 export const CustomerTransactionsPage: React.FC = () => {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
+  const [adjustOpen, setAdjustOpen] = React.useState(false);
+  const [adjustAmount, setAdjustAmount] = React.useState("");
+  const [adjustCorrelationId, setAdjustCorrelationId] = React.useState("");
+  const [adjustComment, setAdjustComment] = React.useState("");
+  const [adjustError, setAdjustError] = React.useState<string | null>(null);
 
-  const { data: customerData, loading: customerLoading, error: customerError } = useQuery(CUSTOMER_QUERY, {
+  const { data: customerData, loading: customerLoading, error: customerError, refetch: refetchCustomer } = useQuery(CUSTOMER_QUERY, {
     variables: { id: customerId ?? "" },
     skip: !customerId,
+    fetchPolicy: "network-only",
   });
   const customer = customerData?.customer ?? null;
 
@@ -52,11 +66,13 @@ export const CustomerTransactionsPage: React.FC = () => {
   });
   const users = usersData?.usersByCustomer ?? [];
 
-  const { data: txData, loading: txLoading, error: txError } = useQuery(CUSTOMER_TRANSACTIONS_QUERY, {
+  const { data: txData, loading: txLoading, error: txError, refetch: refetchTransactions } = useQuery(CUSTOMER_TRANSACTIONS_QUERY, {
     variables: { customerId: customerId ?? "" },
     skip: !customerId,
+    fetchPolicy: "network-only",
   });
   const transactions: Transaction[] = txData?.customerTransactions ?? [];
+  const [manualAdjustPoints, { loading: adjusting }] = useMutation(MANUAL_ADJUST_POINTS_MUTATION);
 
   const selectedTenantName = useMemo(
     () => tenants.find((t) => t.id === selectedTenantId)?.name,
@@ -93,6 +109,41 @@ export const CustomerTransactionsPage: React.FC = () => {
       .filter(([, value]) => value !== null && value !== undefined && value !== "")
       .map(([key, value]) => `${key}:${value}`);
     return entries.length > 0 ? `{${entries.join(", ")}}` : "";
+  };
+
+  const openAdjustDialog = () => {
+    setAdjustAmount("");
+    setAdjustCorrelationId("");
+    setAdjustComment("");
+    setAdjustError(null);
+    setAdjustOpen(true);
+  };
+
+  const submitAdjustment = async () => {
+    if (!customerId) return;
+    const amountValue = Number(adjustAmount);
+    if (!Number.isFinite(amountValue) || amountValue === 0) {
+      setAdjustError("Amount must be a non-zero number.");
+      return;
+    }
+    setAdjustError(null);
+    try {
+      await manualAdjustPoints({
+        variables: {
+          input: {
+            customerId,
+            amount: amountValue,
+            actorEmail: user?.email ?? null,
+            comment: adjustComment.trim() || null,
+            correlationId: adjustCorrelationId.trim() || null,
+          },
+        },
+      });
+      await Promise.all([refetchCustomer(), refetchTransactions()]);
+      setAdjustOpen(false);
+    } catch (err) {
+      setAdjustError((err as Error).message);
+    }
   };
 
   return (
@@ -137,6 +188,17 @@ export const CustomerTransactionsPage: React.FC = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                   Balance: {customer.pointsAccount?.balance ?? 0} • Updated: {formatDate(customer.pointsAccount?.updatedAt)}
                 </Typography>
+                <Box>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    sx={{ bgcolor: "#0c9b50" }}
+                    onClick={openAdjustDialog}
+                    disabled={!customerId}
+                  >
+                    Manual adjustment
+                  </Button>
+                </Box>
               </Stack>
             </DetailSection>
           )}
@@ -150,6 +212,7 @@ export const CustomerTransactionsPage: React.FC = () => {
                   <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Reason</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Comment</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Rules</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Actor</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Correlation</TableCell>
@@ -167,12 +230,17 @@ export const CustomerTransactionsPage: React.FC = () => {
                   const rulesLabel = appliedRules.length > 0 ? `${appliedRules.length} rule(s)` : "—";
                   return (
                     <TableRow key={tx.id}>
-                      <TableCell>{formatDateTime(tx.createdAt)}</TableCell>
-                      <TableCell>{tx.amount}</TableCell>
-                      <TableCell>{tx.reason}</TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          {rulesLabel}
+                    <TableCell>{formatDateTime(tx.createdAt)}</TableCell>
+                    <TableCell>{tx.amount}</TableCell>
+                    <TableCell>{tx.reason}</TableCell>
+                    <TableCell>
+                      <Typography variant="body2" noWrap title={tx.comment ?? ""}>
+                        {tx.comment ?? "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {rulesLabel}
                         </Typography>
                         {appliedRules.length > 0 && (
                           <Stack spacing={0.5} sx={{ mt: 0.5 }}>
@@ -215,6 +283,42 @@ export const CustomerTransactionsPage: React.FC = () => {
           )}
         </Stack>
       </CardContent>
+      <Dialog open={adjustOpen} onClose={() => setAdjustOpen(false)} aria-labelledby="manual-adjust-title">
+        <DialogTitle id="manual-adjust-title">Manual points adjustment</DialogTitle>
+        <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 360 }}>
+          <TextField
+            label="Amount"
+            value={adjustAmount}
+            onChange={(e) => setAdjustAmount(e.target.value)}
+            helperText="Use negative values to deduct points."
+            type="number"
+          />
+          <TextField
+            label="Correlation ID (optional)"
+            value={adjustCorrelationId}
+            onChange={(e) => setAdjustCorrelationId(e.target.value)}
+          />
+          <TextField
+            label="Comment"
+            value={adjustComment}
+            onChange={(e) => setAdjustComment(e.target.value)}
+            placeholder="Why was this adjustment made?"
+            multiline
+            minRows={3}
+          />
+          {adjustError && (
+            <Alert severity="error" sx={{ mt: 1 }}>
+              {adjustError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAdjustOpen(false)}>Cancel</Button>
+          <Button variant="contained" sx={{ bgcolor: "#0c9b50" }} onClick={submitAdjustment} disabled={adjusting}>
+            {adjusting ? "Saving..." : "Apply"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };
