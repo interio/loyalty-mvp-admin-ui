@@ -61,3 +61,30 @@ export const INVOICES_BY_TENANT_PAGE_QUERY = gql`
     }
   }
 `;
+
+export const INVOICE_BY_ID_QUERY = gql`
+  query InvoiceById($tenantId: UUID!, $id: UUID!) {
+    invoiceById(tenantId: $tenantId, id: $id) {
+      id
+      tenantId
+      invoiceId
+      customerExternalId
+      currency
+      actorEmail
+      actorExternalId
+      occurredAt
+      receivedAt
+      status
+      attemptCount
+      lastAttemptAt
+      processedAt
+      error
+      appliedRulesJson
+      lines {
+        sku
+        quantity
+        netAmount
+      }
+    }
+  }
+`;
