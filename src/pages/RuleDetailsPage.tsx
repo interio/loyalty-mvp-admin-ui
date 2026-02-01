@@ -117,6 +117,7 @@ export const RuleDetailsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [shouldRefreshList, setShouldRefreshList] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -339,6 +340,7 @@ export const RuleDetailsPage: React.FC = () => {
         throw new Error(detail || "Failed to update rule");
       }
       setMessage("Rule status updated.");
+      setShouldRefreshList(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -360,7 +362,8 @@ export const RuleDetailsPage: React.FC = () => {
         const detail = await res.text();
         throw new Error(detail || "Failed to delete rule");
       }
-      navigate("/rules");
+      setShouldRefreshList(true);
+      navigate("/rules", { state: { refreshRules: true } });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -380,7 +383,7 @@ export const RuleDetailsPage: React.FC = () => {
             Review this rule configuration and its conditions.
           </Typography>
         </Box>
-        <Button variant="outlined" onClick={() => navigate("/rules")}>
+        <Button variant="outlined" onClick={() => navigate("/rules", { state: { refreshRules: shouldRefreshList } })}>
           Back to rules
         </Button>
       </Stack>

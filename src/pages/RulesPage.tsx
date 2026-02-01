@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useApolloClient, useLazyQuery, useQuery } from "@apollo/client";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
   Autocomplete,
@@ -139,6 +139,7 @@ const createGroup = (operator: "AND" | "OR" = "AND"): ConditionGroup => ({
 });
 
 export const RulesPage: React.FC = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const apolloClient = useApolloClient();
@@ -194,6 +195,12 @@ export const RulesPage: React.FC = () => {
   const isComplexRule = ruleType === "complex_rule";
   const complexDetailsValid = ruleName.trim().length > 0 && pointsToGrant > 0;
   const disabled = !selectedTenantId || !ruleName.trim() || !ruleType || loading || (isComplexRule && !complexDetailsValid);
+
+  const refreshRules = (location.state as { refreshRules?: boolean } | null)?.refreshRules === true;
+  useEffect(() => {
+    if (!refreshRules || !selectedTenantId) return;
+    void refetch({ tenantId: selectedTenantId, page, pageSize });
+  }, [refreshRules, selectedTenantId, page, pageSize, refetch]);
 
   const toLocalDateTimeInput = (value: Date) => {
     const pad = (num: number) => String(num).padStart(2, "0");
