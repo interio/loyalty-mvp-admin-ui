@@ -16,7 +16,7 @@ import { RewardProductEditPage } from "./pages/RewardProductEditPage";
 import { RewardOrdersPage } from "./pages/RewardOrdersPage";
 import { RewardOrderDetailsPage } from "./pages/RewardOrderDetailsPage";
 import { RulesPage } from "./pages/RulesPage";
-import { ComplexRuleEditPage } from "./pages/ComplexRuleEditPage";
+import { RuleDetailsPage } from "./pages/RuleDetailsPage";
 import { EntitiesPage } from "./pages/EntitiesPage";
 import { EntityEditPage } from "./pages/EntityEditPage";
 import { EntityAttributeEditPage } from "./pages/EntityAttributeEditPage";
@@ -45,7 +45,7 @@ const App: React.FC = () => {
                   <Route path="/reward-orders" element={<RewardOrdersPage />} />
                   <Route path="/reward-orders/:id" element={<RewardOrderDetailsPage />} />
                   <Route path="/rules" element={<RulesPage />} />
-                  <Route path="/rules/complex/:ruleId" element={<ComplexRuleEditPage />} />
+                  <Route path="/rules/:ruleId" element={<RuleDetailsPage />} />
                   <Route path="/entities" element={<EntitiesPage />} />
                   <Route path="/entities/:id" element={<EntityEditPage />} />
                   <Route path="/entities/:entityId/attributes/new" element={<EntityAttributeEditPage />} />

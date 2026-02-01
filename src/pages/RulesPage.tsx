@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useApolloClient, useLazyQuery, useQuery } from "@apollo/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,16 +9,10 @@ import {
   Card,
   CardContent,
   Chip,
-  Collapse,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   FormControl,
   FormControlLabel,
   FormHelperText,
-  IconButton,
   InputLabel,
   LinearProgress,
   MenuItem,
@@ -38,9 +32,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
-import { DetailSection } from "../components/DetailSection";
 import { apiBaseUrl } from "../config";
 import { useTenant } from "../modules/tenants/TenantContext";
 import {
@@ -50,7 +41,7 @@ import {
   RULE_ENTITIES_QUERY,
   RULE_OPERATOR_CATALOG_QUERY,
 } from "../modules/entities/queries";
-import { RULES_BY_TENANT_PAGE_QUERY, RULE_CONDITION_TREE_FLAT_QUERY } from "../modules/rules/queries";
+import { RULES_BY_TENANT_PAGE_QUERY } from "../modules/rules/queries";
 
 type RuleType = "sku_quantity" | "spend" | "complex_rule";
 
@@ -102,51 +93,6 @@ type RuleAttributeOption = {
 type RuleOperatorInfo = {
   value: string;
   label: string;
-};
-
-type RuleConditionTreeCondition = {
-  id: string;
-  entityCode: string;
-  attributeCode: string;
-  operator: string;
-  valueJson: string;
-  sortOrder: number;
-};
-
-type RuleConditionTreeGroupFlat = {
-  id: string;
-  parentGroupId?: string | null;
-  logic: "AND" | "OR";
-  sortOrder: number;
-};
-
-type RuleConditionTreeConditionFlat = {
-  id: string;
-  groupId: string;
-  entityCode: string;
-  attributeCode: string;
-  operator: string;
-  valueJson: string;
-  sortOrder: number;
-};
-
-type RuleConditionTreeFlat = {
-  rootGroupId: string;
-  groups: RuleConditionTreeGroupFlat[];
-  conditions: RuleConditionTreeConditionFlat[];
-};
-
-type RuleConditionTreeGroup = {
-  id: string;
-  logic: "AND" | "OR";
-  children: RuleConditionTreeNode[];
-};
-
-type RuleConditionTreeNode = {
-  type: "group" | "condition";
-  sortOrder: number;
-  condition?: RuleConditionTreeCondition | null;
-  group?: RuleConditionTreeGroup | null;
 };
 
 type ConditionGroup = {
@@ -217,17 +163,6 @@ export const RulesPage: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [expandedRuleId, setExpandedRuleId] = useState<string | null>(null);
-  const [activeById, setActiveById] = useState<Record<string, boolean>>({});
-  const [ruleMessages, setRuleMessages] = useState<Record<string, string>>({});
-  const [ruleErrors, setRuleErrors] = useState<Record<string, string>>({});
-  const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
-  const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
-  const [confirmDeleteRuleId, setConfirmDeleteRuleId] = useState<string | null>(null);
-  const [conditionTreesByRule, setConditionTreesByRule] = useState<Record<string, RuleConditionTreeGroup | null>>({});
-  const [conditionTreeErrors, setConditionTreeErrors] = useState<Record<string, string>>({});
-  const [conditionTreeLoading, setConditionTreeLoading] = useState<Record<string, boolean>>({});
-  const requestedEntityCodesRef = useRef<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
@@ -245,7 +180,6 @@ export const RulesPage: React.FC = () => {
   const ruleEntities: RuleEntity[] = ruleEntityData?.ruleEntities ?? [];
   const { data: operatorCatalogData } = useQuery(RULE_OPERATOR_CATALOG_QUERY);
   const operatorCatalog: RuleOperatorInfo[] = operatorCatalogData?.ruleOperatorCatalog ?? [];
-  const [loadConditionTree] = useLazyQuery(RULE_CONDITION_TREE_FLAT_QUERY);
   const operatorLabelByValue = useMemo(() => {
     const map = new Map<string, string>();
     operatorCatalog.forEach((op) => map.set(op.value, op.label));
@@ -286,10 +220,6 @@ export const RulesPage: React.FC = () => {
   };
 
   useEffect(() => {
-    setExpandedRuleId(null);
-    setActiveById({});
-    setRuleMessages({});
-    setRuleErrors({});
     setPage(1);
     setAttributesByEntity({});
     setOperatorsByAttribute({});
@@ -315,13 +245,6 @@ export const RulesPage: React.FC = () => {
       setPage(pageInfo?.totalPages ?? 1);
     }
   }, [pageInfo, page]);
-
-  useEffect(() => {
-    if (!expandedRuleId) return;
-    const rule = rules.find((r) => r.id === expandedRuleId);
-    if (!rule) return;
-    setActiveById((prev) => (rule.id in prev ? prev : { ...prev, [rule.id]: rule.active }));
-  }, [expandedRuleId, rules]);
 
   useEffect(() => {
     if (ruleType === "complex_rule") {
@@ -480,10 +403,6 @@ export const RulesPage: React.FC = () => {
 
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
   const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
-  const getConditionValue = (rule: PointsRule, key: string) => {
-    const entry = rule.conditions?.find((c) => c.key === key);
-    return entry?.value ?? "";
-  };
 
   const loadAttributesForEntity = async (entityCode: string) => {
     if (!selectedTenantId) return;
@@ -529,41 +448,6 @@ export const RulesPage: React.FC = () => {
   const getAttributeById = (entityId: string | undefined, attributeId: string | undefined) => {
     if (!entityId || !attributeId) return undefined;
     return getAttributesForEntity(entityId).find((attr) => attr.id === attributeId);
-  };
-
-  const getEntityLabel = (entityCode: string) => {
-    if (entityCode === "rule") return "Rule";
-    const entity = ruleEntities.find((candidate) => candidate.code === entityCode);
-    return entity?.displayName ?? entityCode;
-  };
-
-  const getAttributeLabel = (entityCode: string, attributeCode: string) => {
-    if (entityCode === "rule" && attributeCode === "rewardPoints") return "Points to grant";
-    const attrs = attributesByEntity[entityCode] ?? [];
-    const attr = attrs.find((candidate) => candidate.code === attributeCode);
-    return attr?.displayName ?? attributeCode;
-  };
-
-  const formatValueJson = (raw: string) => {
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed.join(", ");
-      if (parsed === null || parsed === undefined) return "—";
-      if (typeof parsed === "object") return JSON.stringify(parsed);
-      return String(parsed);
-    } catch {
-      return raw;
-    }
-  };
-
-  const collectEntityCodes = (group: RuleConditionTreeGroup, target: Set<string>) => {
-    group.children.forEach((node) => {
-      if (node.type === "group" && node.group) {
-        collectEntityCodes(node.group, target);
-      } else if (node.type === "condition" && node.condition?.entityCode) {
-        target.add(node.condition.entityCode);
-      }
-    });
   };
 
   const normalizeScalarValue = (raw: string, attribute: RuleAttribute, errors: string[]) => {
@@ -656,140 +540,6 @@ export const RulesPage: React.FC = () => {
       children: rootPayload.type === "group" ? rootPayload.children ?? [] : [],
     };
   };
-
-  const buildTreeFromFlat = (flat: RuleConditionTreeFlat | null) => {
-    if (!flat) return null;
-    const groupById = new Map<string, RuleConditionTreeGroup>();
-    flat.groups.forEach((group) => {
-      groupById.set(group.id, { id: group.id, logic: group.logic, children: [] });
-    });
-
-    const nodesByGroup = new Map<string, RuleConditionTreeNode[]>();
-    const pushNode = (groupId: string, node: RuleConditionTreeNode) => {
-      const existing = nodesByGroup.get(groupId) ?? [];
-      existing.push(node);
-      nodesByGroup.set(groupId, existing);
-    };
-
-    flat.groups.forEach((group) => {
-      if (!group.parentGroupId) return;
-      const childGroup = groupById.get(group.id);
-      if (!childGroup) return;
-      pushNode(group.parentGroupId, {
-        type: "group",
-        sortOrder: group.sortOrder,
-        group: childGroup,
-      });
-    });
-
-    flat.conditions.forEach((condition) => {
-      pushNode(condition.groupId, {
-        type: "condition",
-        sortOrder: condition.sortOrder,
-        condition: {
-          id: condition.id,
-          entityCode: condition.entityCode,
-          attributeCode: condition.attributeCode,
-          operator: condition.operator,
-          valueJson: condition.valueJson,
-          sortOrder: condition.sortOrder,
-        },
-      });
-    });
-
-    groupById.forEach((group, groupId) => {
-      const nodes = nodesByGroup.get(groupId) ?? [];
-      group.children = nodes.sort((a, b) => a.sortOrder - b.sortOrder);
-    });
-
-    return groupById.get(flat.rootGroupId) ?? null;
-  };
-
-  useEffect(() => {
-    if (!expandedRuleId || !selectedTenantId) return;
-    const rule = rules.find((candidate) => candidate.id === expandedRuleId);
-    if (!rule || rule.ruleType !== "complex_rule") return;
-    if (conditionTreesByRule[rule.id] || conditionTreeLoading[rule.id]) return;
-
-    setConditionTreeLoading((prev) => ({ ...prev, [rule.id]: true }));
-    setConditionTreeErrors((prev) => ({ ...prev, [rule.id]: "" }));
-    loadConditionTree({ variables: { ruleId: rule.id, tenantId: selectedTenantId }, fetchPolicy: "network-only" })
-      .then((res) => {
-        const flat = res.data?.ruleConditionTreeFlat ?? null;
-        const tree = buildTreeFromFlat(flat);
-        setConditionTreesByRule((prev) => ({ ...prev, [rule.id]: tree }));
-        if (tree) {
-          const codes = new Set<string>();
-          collectEntityCodes(tree, codes);
-          codes.forEach((code) => {
-            if (code === "rule" || requestedEntityCodesRef.current.has(code)) return;
-            requestedEntityCodesRef.current.add(code);
-            void loadAttributesForEntity(code);
-          });
-        }
-      })
-      .catch((err) => {
-        setConditionTreeErrors((prev) => ({ ...prev, [rule.id]: (err as Error).message }));
-      })
-      .finally(() => {
-        setConditionTreeLoading((prev) => ({ ...prev, [rule.id]: false }));
-      });
-  }, [
-    expandedRuleId,
-    selectedTenantId,
-    rules,
-    conditionTreesByRule,
-    conditionTreeLoading,
-    loadConditionTree,
-  ]);
-
-  const renderConditionTree = (group: RuleConditionTreeGroup, depth = 0) => (
-    <Box
-      key={group.id}
-      sx={{
-        border: "1px solid #e0e7e2",
-        borderRadius: 2,
-        p: 2,
-        mt: 1,
-        backgroundColor: depth === 0 ? "#fff" : "#f7faf8",
-      }}
-    >
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
-        <Chip label={group.logic === "AND" ? "ALL" : "ANY"} size="small" />
-        <Typography variant="body2" color="text.secondary">
-          {group.logic === "AND" ? "If all of these conditions are true." : "If any of these conditions are true."}
-        </Typography>
-      </Stack>
-      <Stack spacing={1.5} sx={{ mt: 1.5 }}>
-        {group.children.map((node, index) => {
-          if (node.type === "group" && node.group) {
-            return renderConditionTree(node.group, depth + 1);
-          }
-          if (node.type === "condition" && node.condition) {
-            const condition = node.condition;
-            const operatorLabel = operatorLabelByValue.get(condition.operator) ?? condition.operator;
-            return (
-              <Stack
-                key={`${condition.id}-${index}`}
-                direction={{ xs: "column", md: "row" }}
-                spacing={1}
-                sx={{ pl: depth * 1.5 }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {getEntityLabel(condition.entityCode)}.{getAttributeLabel(condition.entityCode, condition.attributeCode)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {operatorLabel}
-                </Typography>
-                <Typography variant="body2">{formatValueJson(condition.valueJson)}</Typography>
-              </Stack>
-            );
-          }
-          return null;
-        })}
-      </Stack>
-    </Box>
-  );
 
   const updateNode = (node: ConditionNode, targetId: string, updater: (node: ConditionNode) => ConditionNode) => {
     if (node.id === targetId) return updater(node);
@@ -1162,70 +912,6 @@ export const RulesPage: React.FC = () => {
     </Box>
   );
 
-  const handleUpdateRule = async (rule: PointsRule) => {
-    if (!selectedTenantId) return;
-    const nextActive = activeById[rule.id];
-    if (nextActive === undefined) return;
-    setSavingRuleId(rule.id);
-    setRuleErrors((prev) => ({ ...prev, [rule.id]: "" }));
-    setRuleMessages((prev) => ({ ...prev, [rule.id]: "" }));
-    try {
-      const payload = {
-        tenantId: selectedTenantId,
-        active: nextActive,
-      };
-
-      const res = await fetch(`${apiBaseUrl}/api/v1/rules/points/${rule.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const detail = await res.text();
-        throw new Error(detail || "Failed to update rule");
-      }
-      setRuleMessages((prev) => ({ ...prev, [rule.id]: "Rule status updated." }));
-      await loadRules({ variables: { tenantId: selectedTenantId, page, pageSize } });
-      refetch();
-    } catch (err) {
-      setRuleErrors((prev) => ({ ...prev, [rule.id]: (err as Error).message }));
-    } finally {
-      setSavingRuleId(null);
-    }
-  };
-
-  const handleDeleteRule = async (rule: PointsRule) => {
-    if (!selectedTenantId) return;
-    setDeletingRuleId(rule.id);
-    setRuleErrors((prev) => ({ ...prev, [rule.id]: "" }));
-    setRuleMessages((prev) => ({ ...prev, [rule.id]: "" }));
-    try {
-      const res = await fetch(
-        `${apiBaseUrl}/api/v1/rules/points/${rule.id}?tenantId=${encodeURIComponent(selectedTenantId)}`,
-        {
-          method: "DELETE",
-        },
-      );
-      if (!res.ok) {
-        const detail = await res.text();
-        throw new Error(detail || "Failed to delete rule");
-      }
-      setRuleMessages((prev) => ({ ...prev, [rule.id]: "Rule deleted." }));
-      setActiveById((prev) => {
-        const next = { ...prev };
-        delete next[rule.id];
-        return next;
-      });
-      await loadRules({ variables: { tenantId: selectedTenantId, page, pageSize } });
-      refetch();
-    } catch (err) {
-      setRuleErrors((prev) => ({ ...prev, [rule.id]: (err as Error).message }));
-    } finally {
-      setDeletingRuleId(null);
-    }
-  };
-
   return (
     <Card sx={{ borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}>
       <CardContent>
@@ -1440,7 +1126,6 @@ export const RulesPage: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell />
                 <TableCell>Name</TableCell>
                 <TableCell>Type</TableCell>
                 <TableCell>Version</TableCell>
@@ -1451,195 +1136,29 @@ export const RulesPage: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rules.map((rule) => {
-                const isExpanded = expandedRuleId === rule.id;
-                const activeValue = activeById[rule.id] ?? rule.active;
-                const activeDirty = activeValue !== rule.active;
-                return (
-                  <React.Fragment key={rule.id}>
-                    <TableRow hover>
-                      <TableCell>
-                        <IconButton size="small" onClick={() => setExpandedRuleId(isExpanded ? null : rule.id)}>
-                          {isExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell>{rule.name}</TableCell>
-                      <TableCell>{rule.ruleType}</TableCell>
-                      <TableCell>{rule.ruleVersion}</TableCell>
-                      <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
-                      <TableCell>{rule.priority}</TableCell>
-                      <TableCell>{formatDate(rule.effectiveFrom)}</TableCell>
-                      <TableCell>{formatDate(rule.effectiveTo)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={8} sx={{ p: 0, border: 0 }}>
-                        <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                          <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
-                            <DetailSection title="Rule details">
-                              <Stack spacing={1}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  Rule ID: {rule.id}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  Tenant ID: {rule.tenantId}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  Created: {formatDate(rule.createdAt)}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  Updated: {formatDate(rule.updatedAt)}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  Name: {rule.name}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  Rule type: {rule.ruleType}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  Version: {rule.ruleVersion}
-                                </Typography>
-                                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                                  <FormControlLabel
-                                    control={
-                                      <Switch
-                                        checked={activeValue}
-                                        onChange={(e) =>
-                                          setActiveById((prev) => ({
-                                            ...prev,
-                                            [rule.id]: e.target.checked,
-                                          }))
-                                        }
-                                      />
-                                    }
-                                    label={activeValue ? "Active" : "Inactive"}
-                                  />
-                                  <Box>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                      Priority
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                      {rule.priority}
-                                    </Typography>
-                                  </Box>
-                                  <Box>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                      Effective from
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                      {formatDate(rule.effectiveFrom)}
-                                    </Typography>
-                                  </Box>
-                                  <Box>
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                      Effective to
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                      {formatDate(rule.effectiveTo)}
-                                    </Typography>
-                                  </Box>
-                                </Stack>
-                              </Stack>
-                            </DetailSection>
-                            <DetailSection title="Conditions" sx={{ mt: 2 }}>
-                              {rule.ruleType === "complex_rule" ? (
-                                conditionTreeLoading[rule.id] ? (
-                                  <LinearProgress />
-                                ) : conditionTreeErrors[rule.id] ? (
-                                  <Alert severity="error">{conditionTreeErrors[rule.id]}</Alert>
-                                ) : conditionTreesByRule[rule.id] ? (
-                                  renderConditionTree(conditionTreesByRule[rule.id] as RuleConditionTreeGroup)
-                                ) : (
-                                  <Alert severity="info">No condition tree found for this rule.</Alert>
-                                )
-                              ) : rule.ruleType === "sku_quantity" ? (
-                                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                                  <TextField
-                                    label="Product SKU"
-                                    value={getConditionValue(rule, "sku")}
-                                    fullWidth
-                                    disabled
-                                  />
-                                  <TextField
-                                    label="Quantity step (X)"
-                                    type="number"
-                                    value={getConditionValue(rule, "quantityStep")}
-                                    fullWidth
-                                    disabled
-                                  />
-                                  <TextField
-                                    label="Reward points (Y)"
-                                    type="number"
-                                    value={getConditionValue(rule, "rewardPoints")}
-                                    fullWidth
-                                    disabled
-                                  />
-                                </Stack>
-                              ) : (
-                                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                                  <TextField
-                                    label="Spend X (currency)"
-                                    type="number"
-                                    value={getConditionValue(rule, "spendStep")}
-                                    fullWidth
-                                    disabled
-                                  />
-                                  <TextField
-                                    label="Get Y points"
-                                    type="number"
-                                    value={getConditionValue(rule, "rewardPoints")}
-                                    fullWidth
-                                    disabled
-                                  />
-                                </Stack>
-                              )}
-                            </DetailSection>
-                            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
-                              <Button
-                                variant="contained"
-                                sx={{ bgcolor: "#0c9b50" }}
-                                onClick={() => handleUpdateRule(rule)}
-                                disabled={savingRuleId === rule.id || deletingRuleId === rule.id || !activeDirty}
-                              >
-                                {savingRuleId === rule.id ? "Saving..." : "Save status"}
-                              </Button>
-                              {rule.ruleType === "complex_rule" && (
-                                <Button
-                                  variant="outlined"
-                                  onClick={() => navigate(`/rules/complex/${rule.id}`)}
-                                  disabled={savingRuleId === rule.id || deletingRuleId === rule.id}
-                                >
-                                  Open complex rule
-                                </Button>
-                              )}
-                              <Button
-                                variant="outlined"
-                                color="error"
-                                onClick={() => setConfirmDeleteRuleId(rule.id)}
-                                disabled={savingRuleId === rule.id || deletingRuleId === rule.id}
-                              >
-                                {deletingRuleId === rule.id ? "Deleting..." : "Delete rule"}
-                              </Button>
-                            </Stack>
-                            {ruleErrors[rule.id] && (
-                              <Alert severity="error" sx={{ mt: 2 }}>
-                                {ruleErrors[rule.id]}
-                              </Alert>
-                            )}
-                            {ruleMessages[rule.id] && (
-                              <Alert severity="success" sx={{ mt: 2 }}>
-                                {ruleMessages[rule.id]}
-                              </Alert>
-                            )}
-                          </Box>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                );
-              })}
+              {rules.map((rule) => (
+                <TableRow
+                  key={rule.id}
+                  hover
+                  onClick={() => navigate(`/rules/${rule.id}`)}
+                  sx={{ cursor: "pointer" }}
+                >
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {rule.name}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>{rule.ruleType}</TableCell>
+                  <TableCell>{rule.ruleVersion}</TableCell>
+                  <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
+                  <TableCell>{rule.priority}</TableCell>
+                  <TableCell>{formatDate(rule.effectiveFrom)}</TableCell>
+                  <TableCell>{formatDate(rule.effectiveTo)}</TableCell>
+                </TableRow>
+              ))}
               {selectedTenantId && !rulesLoading && rules.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={7}>
                     <Typography variant="body2" color="text.secondary">
                       No rules found for this tenant.
                     </Typography>
@@ -1659,33 +1178,7 @@ export const RulesPage: React.FC = () => {
             />
           </Box>
         )}
-        <Dialog
-          open={!!confirmDeleteRuleId}
-          onClose={() => setConfirmDeleteRuleId(null)}
-          aria-labelledby="delete-rule-title"
-        >
-          <DialogTitle id="delete-rule-title">Delete rule?</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary">
-              This action cannot be undone. The rule will be permanently removed.
-            </Typography>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button onClick={() => setConfirmDeleteRuleId(null)}>Cancel</Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => {
-                const rule = rules.find((r) => r.id === confirmDeleteRuleId);
-                setConfirmDeleteRuleId(null);
-                if (rule) void handleDeleteRule(rule);
-              }}
-            >
-              Delete rule
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </CardContent>
-    </Card>
+     </CardContent>
+   </Card>
   );
 };
