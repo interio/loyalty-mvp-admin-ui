@@ -368,12 +368,16 @@ export const CustomersView: React.FC = () => {
                                                     <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                                                       {appliedRules.map((rule: any, idx: number) => {
                                                         const ruleType = rule.ruleType ?? rule.RuleType ?? "rule";
+                                                        const ruleName = rule.ruleName ?? rule.RuleName ?? "—";
                                                         const ruleVersion = rule.ruleVersion ?? rule.RuleVersion ?? "?";
                                                         const pointsAwarded = rule.pointsAwarded ?? rule.PointsAwarded ?? 0;
                                                         const ruleId = rule.ruleId ?? rule.RuleId ?? "";
                                                         const details = describeRuleDetails(rule);
                                                         return (
                                                           <Box key={`${tx.id}-rule-${idx}`} sx={{ bgcolor: "var(--detail-section-inner-bg)", borderRadius: 1, p: 1 }}>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                                              name: {ruleName}
+                                                            </Typography>
                                                             <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                                                               type: {ruleType}
                                                             </Typography>

@@ -272,12 +272,16 @@ export const InvoiceDetailsPage: React.FC = () => {
                     <Stack spacing={1}>
                       {appliedRules.map((rule: any, idx: number) => {
                         const ruleType = rule.ruleType ?? rule.RuleType ?? "rule";
+                        const ruleName = rule.ruleName ?? rule.RuleName ?? "—";
                         const ruleVersion = rule.ruleVersion ?? rule.RuleVersion ?? "?";
                         const pointsAwarded = rule.pointsAwarded ?? rule.PointsAwarded ?? 0;
                         const ruleId = rule.ruleId ?? rule.RuleId ?? "";
                         const details = describeRuleDetails(rule);
                         return (
                           <Box key={`${invoice.id}-rule-${idx}`} sx={{ bgcolor: "var(--detail-section-inner-bg)", borderRadius: 1, p: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                              name: {ruleName}
+                            </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                               type: {ruleType}
                             </Typography>
