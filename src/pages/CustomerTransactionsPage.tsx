@@ -27,6 +27,7 @@ type Transaction = {
   id: string;
   customerId: string;
   actorUserId?: string | null;
+  actorEmail?: string | null;
   amount: number;
   reason: string;
   correlationId?: string | null;
@@ -157,9 +158,11 @@ export const CustomerTransactionsPage: React.FC = () => {
               <TableBody>
                 {transactions.map((tx) => {
                   const userEmail = tx.actorUserId ? userEmailById.get(tx.actorUserId) : null;
-                  const actorLabel = tx.actorUserId && userEmail
-                    ? `${userEmail} (${tx.actorUserId})`
-                    : customer?.contactEmail ?? "—";
+                  const actorLabel = tx.actorEmail
+                    ? tx.actorEmail
+                    : tx.actorUserId && userEmail
+                      ? `${userEmail} (${tx.actorUserId})`
+                      : customer?.contactEmail ?? "—";
                   const appliedRules = parseAppliedRules(tx.appliedRulesJson);
                   const rulesLabel = appliedRules.length > 0 ? `${appliedRules.length} rule(s)` : "—";
                   return (

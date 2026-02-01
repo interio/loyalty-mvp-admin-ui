@@ -37,6 +37,7 @@ import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
 import { MANUAL_ADJUST_POINTS_MUTATION } from "../ledger/queries";
 import { useTenant } from "../tenants/TenantContext";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useAuth } from "../../auth/AuthContext";
 
 type Customer = {
   id: string;
@@ -54,6 +55,7 @@ type Customer = {
 export const CustomersView: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const [search, setSearch] = useState("");
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(null);
@@ -161,6 +163,7 @@ export const CustomersView: React.FC = () => {
           input: {
             customerId: adjustCustomerId,
             amount: amountValue,
+            actorEmail: user?.email ?? null,
             correlationId: adjustCorrelationId.trim() || null,
           },
         },
