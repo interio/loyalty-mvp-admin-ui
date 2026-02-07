@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@apollo/client";
 import {
   Alert,
@@ -28,9 +28,11 @@ import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
 import { PRODUCTS_PAGE_QUERY } from "./queries";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
+import { useTenant } from "../tenants/TenantContext";
 
 type Product = {
   id: string;
+  tenantId: string;
   distributorId: string;
   sku: string;
   gtin?: string | null;
@@ -42,6 +44,7 @@ type Product = {
 };
 
 export const ProductsView: React.FC = () => {
+  const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const [search, setSearch] = useState("");
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -49,11 +52,13 @@ export const ProductsView: React.FC = () => {
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
   const { data, loading, error } = useQuery(PRODUCTS_PAGE_QUERY, {
-    variables: { page, pageSize, search: debouncedSearch || null },
+    variables: { tenantId: selectedTenantId ?? "", page, pageSize, search: debouncedSearch || null },
+    skip: !selectedTenantId,
   });
 
   const products: Product[] = data?.productsPage?.nodes ?? [];
   const pageInfo = data?.productsPage?.pageInfo;
+  const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
 
   const totalLabel = debouncedSearch
     ? `Matches: ${pageInfo?.totalCount ?? 0}`
@@ -80,7 +85,13 @@ export const ProductsView: React.FC = () => {
     <Card>
       <CardHeader
         title="Products"
-        subheader="Viewing all products"
+        subheader={
+          tenantName
+            ? `Viewing products for ${tenantName}`
+            : tenantsLoading
+              ? "Loading tenants..."
+              : "Select a tenant from the header to load products."
+        }
       />
       <CardContent>
         <Stack spacing={2}>
@@ -99,6 +110,9 @@ export const ProductsView: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
             {totalLabel}
           </Typography>
+          {!selectedTenantId && !tenantsLoading && (
+            <Alert severity="info">Select a tenant to view products.</Alert>
+          )}
           {error && <Alert severity="error">{error.message}</Alert>}
           {loading && <LinearProgress />}
           <TableContainer>
@@ -142,6 +156,14 @@ export const ProductsView: React.FC = () => {
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.id}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Tenant ID
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {product.tenantId}
                                     </Typography>
                                   </Grid>
                                   <Grid item xs={12} sm={6} md={4}>

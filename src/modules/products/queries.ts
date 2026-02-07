@@ -1,9 +1,10 @@
 import { gql } from "@apollo/client";
 
 export const PRODUCTS_QUERY = gql`
-  query Products {
-    products {
+  query Products($tenantId: UUID!) {
+    products(tenantId: $tenantId) {
       id
+      tenantId
       distributorId
       sku
       gtin
@@ -20,10 +21,11 @@ export const PRODUCTS_QUERY = gql`
 `;
 
 export const PRODUCTS_PAGE_QUERY = gql`
-  query ProductsPage($page: Int!, $pageSize: Int!, $search: String) {
-    productsPage(page: $page, pageSize: $pageSize, search: $search) {
+  query ProductsPage($tenantId: UUID!, $page: Int!, $pageSize: Int!, $search: String) {
+    productsPage(tenantId: $tenantId, page: $page, pageSize: $pageSize, search: $search) {
       nodes {
         id
+        tenantId
         distributorId
         sku
         gtin
@@ -47,9 +49,10 @@ export const PRODUCTS_PAGE_QUERY = gql`
 `;
 
 export const PRODUCTS_SEARCH_QUERY = gql`
-  query ProductsSearch($search: String!) {
-    productsSearch(search: $search) {
+  query ProductsSearch($tenantId: UUID!, $search: String!) {
+    productsSearch(tenantId: $tenantId, search: $search) {
       id
+      tenantId
       distributorId
       sku
       gtin
