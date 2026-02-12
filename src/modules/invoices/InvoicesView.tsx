@@ -44,14 +44,22 @@ type Invoice = {
   appliedRulesJson?: string | null;
 };
 
+type InvoicesRouteState = {
+  refreshInvoices?: boolean;
+  prefillSearch?: string;
+  autoOpenInvoiceId?: string;
+};
+
 export const InvoicesView: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [pendingAutoOpenInvoiceId, setPendingAutoOpenInvoiceId] = useState<string | null>(null);
   const pageSize = 25;
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
+  const locationState = (location.state as InvoicesRouteState | null) ?? null;
 
   const { data, loading, error, refetch } = useQuery(INVOICES_BY_TENANT_PAGE_QUERY, {
     variables: {
@@ -69,13 +77,29 @@ export const InvoicesView: React.FC = () => {
     () => tenants.find((t) => t.id === selectedTenantId)?.name,
     [tenants, selectedTenantId],
   );
-  const refreshInvoices = (location.state as { refreshInvoices?: boolean } | null)?.refreshInvoices === true;
+  const refreshInvoices = locationState?.refreshInvoices === true;
 
   useEffect(() => {
     if (selectedTenantId) {
       setPage(1);
     }
   }, [selectedTenantId, debouncedSearch]);
+
+  useEffect(() => {
+    const prefillSearch = locationState?.prefillSearch?.trim();
+    const autoOpenInvoiceId = locationState?.autoOpenInvoiceId?.trim();
+    if (!prefillSearch && !autoOpenInvoiceId) return;
+
+    if (prefillSearch) {
+      setSearch(prefillSearch);
+      setPage(1);
+    }
+    if (autoOpenInvoiceId) {
+      setPendingAutoOpenInvoiceId(autoOpenInvoiceId);
+    }
+
+    navigate(".", { replace: true, state: refreshInvoices ? { refreshInvoices: true } : {} });
+  }, [locationState?.prefillSearch, locationState?.autoOpenInvoiceId, refreshInvoices, navigate]);
 
   useEffect(() => {
     if ((pageInfo?.totalPages ?? 0) > 0 && page > (pageInfo?.totalPages ?? 0)) {
@@ -93,6 +117,22 @@ export const InvoicesView: React.FC = () => {
     });
     navigate(".", { replace: true, state: {} });
   }, [refreshInvoices, selectedTenantId, page, pageSize, debouncedSearch, refetch, navigate]);
+
+  useEffect(() => {
+    if (!selectedTenantId || !pendingAutoOpenInvoiceId || loading) return;
+
+    const target = pendingAutoOpenInvoiceId.trim().toLowerCase();
+    const exactMatch = invoices.find((invoice) => invoice.invoiceId?.trim().toLowerCase() === target);
+    if (exactMatch) {
+      setPendingAutoOpenInvoiceId(null);
+      navigate(`/invoices/${exactMatch.id}`);
+      return;
+    }
+
+    if (debouncedSearch.toLowerCase() === target) {
+      setPendingAutoOpenInvoiceId(null);
+    }
+  }, [selectedTenantId, pendingAutoOpenInvoiceId, loading, invoices, debouncedSearch, navigate]);
 
   const totalLabel = debouncedSearch
     ? `Matches: ${pageInfo?.totalCount ?? 0}`

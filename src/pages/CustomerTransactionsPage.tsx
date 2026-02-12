@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { useMutation, useQuery } from "@apollo/client";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -12,6 +12,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Link,
   LinearProgress,
   Stack,
   Table,
@@ -109,6 +110,34 @@ export const CustomerTransactionsPage: React.FC = () => {
       .filter(([, value]) => value !== null && value !== undefined && value !== "")
       .map(([key, value]) => `${key}:${value}`);
     return entries.length > 0 ? `{${entries.join(", ")}}` : "";
+  };
+
+  const renderCorrelation = (tx: Transaction) => {
+    const correlationId = tx.correlationId?.trim();
+    if (!correlationId) return "—";
+
+    if (tx.reason === "reward_redeem") {
+      return (
+        <Link component={RouterLink} to={`/reward-orders/${correlationId}`} underline="hover">
+          {correlationId}
+        </Link>
+      );
+    }
+
+    if (tx.reason === "invoice_earn") {
+      return (
+        <Link
+          component={RouterLink}
+          to="/invoices"
+          state={{ prefillSearch: correlationId, autoOpenInvoiceId: correlationId }}
+          underline="hover"
+        >
+          {correlationId}
+        </Link>
+      );
+    }
+
+    return correlationId;
   };
 
   const openAdjustDialog = () => {
@@ -274,7 +303,7 @@ export const CustomerTransactionsPage: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell>{actorLabel}</TableCell>
-                      <TableCell>{tx.correlationId ?? "—"}</TableCell>
+                      <TableCell>{renderCorrelation(tx)}</TableCell>
                     </TableRow>
                   );
                 })}
