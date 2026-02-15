@@ -330,10 +330,10 @@ export const CustomersView: React.FC = () => {
                                     <DetailSection title="Customer details">
                                       <Grid container spacing={2}>
                                         <Grid item xs={12} sm={6}>
-                                          <TextField label="Customer ID" value={customer.id} fullWidth size="small" InputProps={{ readOnly: true }} />
+                                          <TextField label="Customer ID" value={customer.id} fullWidth size="small" disabled />
                                         </Grid>
                                         <Grid item xs={12} sm={6}>
-                                          <TextField label="Tenant ID" value={customer.tenantId} fullWidth size="small" InputProps={{ readOnly: true }} />
+                                          <TextField label="Tenant ID" value={customer.tenantId} fullWidth size="small" disabled />
                                         </Grid>
                                         <Grid item xs={12} sm={6}>
                                           <TextField label="Name" value={customer.name} fullWidth size="small" disabled />

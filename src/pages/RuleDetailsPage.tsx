@@ -235,6 +235,9 @@ export const RuleDetailsPage: React.FC = () => {
     });
 
     flat.conditions.forEach((condition) => {
+      if (condition.entityCode === "rule" && condition.attributeCode === "rewardPoints") {
+        return;
+      }
       pushNode(condition.groupId, {
         type: "condition",
         sortOrder: condition.sortOrder,
