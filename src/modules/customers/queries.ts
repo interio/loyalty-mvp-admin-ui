@@ -5,6 +5,7 @@ export const CUSTOMERS_BY_TENANT_QUERY = gql`
     customersByTenant(tenantId: $tenantId) {
       id
       name
+      tier
       externalId
       contactEmail
       tenantId
@@ -23,6 +24,7 @@ export const CUSTOMERS_BY_TENANT_PAGE_QUERY = gql`
       nodes {
         id
         name
+        tier
         externalId
         contactEmail
         tenantId
@@ -47,6 +49,7 @@ export const CUSTOMERS_BY_TENANT_SEARCH_QUERY = gql`
     customersByTenantSearch(tenantId: $tenantId, search: $search) {
       id
       name
+      tier
       externalId
       contactEmail
       tenantId
@@ -64,6 +67,7 @@ export const CUSTOMER_QUERY = gql`
     customer(id: $id) {
       id
       name
+      tier
       externalId
       contactEmail
       tenantId
@@ -72,6 +76,15 @@ export const CUSTOMER_QUERY = gql`
         balance
         updatedAt
       }
+    }
+  }
+`;
+
+export const UPDATE_CUSTOMER_TIER_MUTATION = gql`
+  mutation UpdateCustomerTier($input: UpdateCustomerTierInput!) {
+    updateCustomerTier(input: $input) {
+      id
+      tier
     }
   }
 `;

@@ -17,6 +17,7 @@ import {
   IconButton,
   InputAdornment,
   LinearProgress,
+  MenuItem,
   Pagination,
   Stack,
   Table,
@@ -32,7 +33,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
-import { CUSTOMERS_BY_TENANT_PAGE_QUERY } from "./queries";
+import { CUSTOMERS_BY_TENANT_PAGE_QUERY, UPDATE_CUSTOMER_TIER_MUTATION } from "./queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
 import { MANUAL_ADJUST_POINTS_MUTATION } from "../ledger/queries";
 import { useTenant } from "../tenants/TenantContext";
@@ -42,6 +43,7 @@ import { useAuth } from "../../auth/AuthContext";
 type Customer = {
   id: string;
   name: string;
+  tier?: string;
   externalId?: string;
   contactEmail?: string;
   tenantId: string;
@@ -51,6 +53,8 @@ type Customer = {
     updatedAt?: string;
   } | null;
 };
+
+const TIER_OPTIONS = ["bronze", "silver", "gold", "platinum"] as const;
 
 export const CustomersView: React.FC = () => {
   const location = useLocation();
@@ -67,6 +71,9 @@ export const CustomersView: React.FC = () => {
   const [adjustCorrelationId, setAdjustCorrelationId] = useState("");
   const [adjustComment, setAdjustComment] = useState("");
   const [adjustError, setAdjustError] = useState<string | null>(null);
+  const [tierDrafts, setTierDrafts] = useState<Record<string, string>>({});
+  const [savingTierFor, setSavingTierFor] = useState<string | null>(null);
+  const [tierErrors, setTierErrors] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(search.trim(), 250);
 
@@ -83,6 +90,7 @@ export const CustomersView: React.FC = () => {
   });
   const [loadUsers] = useLazyQuery(USERS_BY_CUSTOMER_QUERY);
   const [manualAdjustPoints, { loading: adjusting }] = useMutation(MANUAL_ADJUST_POINTS_MUTATION);
+  const [updateCustomerTier] = useMutation(UPDATE_CUSTOMER_TIER_MUTATION);
 
   const customers: Customer[] = data?.customersByTenantPage?.nodes ?? [];
   const pageInfo = data?.customersByTenantPage?.pageInfo;
@@ -110,6 +118,19 @@ export const CustomersView: React.FC = () => {
       setPage(totalPages);
     }
   }, [totalPages, page]);
+
+  useEffect(() => {
+    if (customers.length === 0) return;
+    setTierDrafts((prev) => {
+      const next = { ...prev };
+      for (const customer of customers) {
+        if (!next[customer.id]) {
+          next[customer.id] = (customer.tier ?? "bronze").toLowerCase();
+        }
+      }
+      return next;
+    });
+  }, [customers]);
 
 
 
@@ -141,6 +162,7 @@ export const CustomersView: React.FC = () => {
   }, [expandCustomerId, expandedCustomerId, navigate]);
 
   const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "-");
+  const formatTierLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
   const openAdjustDialog = (customerId: string) => {
     setAdjustCustomerId(customerId);
@@ -182,6 +204,52 @@ export const CustomersView: React.FC = () => {
       setAdjustOpen(false);
     } catch (err) {
       setAdjustError((err as Error).message);
+    }
+  };
+
+  const changeTierDraft = (customerId: string, tier: string) => {
+    setTierDrafts((prev) => ({ ...prev, [customerId]: tier }));
+    setTierErrors((prev) => {
+      if (!prev[customerId]) return prev;
+      const next = { ...prev };
+      delete next[customerId];
+      return next;
+    });
+  };
+
+  const saveTier = async (customer: Customer) => {
+    if (!selectedTenantId) return;
+    const tier = (tierDrafts[customer.id] ?? customer.tier ?? "bronze").toLowerCase();
+
+    setSavingTierFor(customer.id);
+    setTierErrors((prev) => {
+      if (!prev[customer.id]) return prev;
+      const next = { ...prev };
+      delete next[customer.id];
+      return next;
+    });
+
+    try {
+      await updateCustomerTier({
+        variables: {
+          input: {
+            customerId: customer.id,
+            tenantId: selectedTenantId,
+            tier,
+          },
+        },
+      });
+      await refetch({
+        tenantId: selectedTenantId,
+        page,
+        pageSize,
+        search: debouncedSearch || null,
+      });
+      setTierDrafts((prev) => ({ ...prev, [customer.id]: tier }));
+    } catch (err) {
+      setTierErrors((prev) => ({ ...prev, [customer.id]: (err as Error).message }));
+    } finally {
+      setSavingTierFor(null);
     }
   };
 
@@ -262,20 +330,61 @@ export const CustomersView: React.FC = () => {
                                     <DetailSection title="Customer details">
                                       <Grid container spacing={2}>
                                         <Grid item xs={12} sm={6}>
-                                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                            Customer ID
-                                          </Typography>
-                                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                            {customer.id}
-                                          </Typography>
+                                          <TextField label="Customer ID" value={customer.id} fullWidth size="small" InputProps={{ readOnly: true }} />
                                         </Grid>
                                         <Grid item xs={12} sm={6}>
-                                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                            Tenant ID
-                                          </Typography>
-                                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                            {customer.tenantId}
-                                          </Typography>
+                                          <TextField label="Tenant ID" value={customer.tenantId} fullWidth size="small" InputProps={{ readOnly: true }} />
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                          <TextField label="Name" value={customer.name} fullWidth size="small" disabled />
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                          <TextField label="External ID" value={customer.externalId ?? "—"} fullWidth size="small" disabled />
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                          <TextField label="Contact Email" value={customer.contactEmail ?? "—"} fullWidth size="small" disabled />
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                          <TextField
+                                            select
+                                            label="Tier"
+                                            value={(tierDrafts[customer.id] ?? customer.tier ?? "bronze").toLowerCase()}
+                                            onChange={(event) => changeTierDraft(customer.id, event.target.value)}
+                                            fullWidth
+                                            size="small"
+                                          >
+                                            {TIER_OPTIONS.map((tier) => (
+                                              <MenuItem key={tier} value={tier}>
+                                                {formatTierLabel(tier)}
+                                              </MenuItem>
+                                            ))}
+                                          </TextField>
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
+                                            <Button
+                                              size="small"
+                                              variant="contained"
+                                              sx={{ bgcolor: "#0c9b50" }}
+                                              onClick={() => saveTier(customer)}
+                                              disabled={
+                                                !selectedTenantId ||
+                                                savingTierFor === customer.id ||
+                                                (tierDrafts[customer.id] ?? customer.tier ?? "bronze").toLowerCase() ===
+                                                  (customer.tier ?? "bronze").toLowerCase()
+                                              }
+                                            >
+                                              {savingTierFor === customer.id ? "Saving..." : "Save tier"}
+                                            </Button>
+                                            <Typography variant="caption" color="text.secondary">
+                                              Only tier can be edited here. Other customer fields are read-only.
+                                            </Typography>
+                                          </Stack>
+                                          {tierErrors[customer.id] && (
+                                            <Alert severity="error" sx={{ mt: 1 }}>
+                                              {tierErrors[customer.id]}
+                                            </Alert>
+                                          )}
                                         </Grid>
                                       </Grid>
                                     </DetailSection>
