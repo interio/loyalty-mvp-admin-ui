@@ -20,6 +20,7 @@ import DashboardCustomizeIcon from "@mui/icons-material/DashboardCustomize";
 import PeopleIcon from "@mui/icons-material/People";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import StoreIcon from "@mui/icons-material/Store";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
 import RuleIcon from "@mui/icons-material/Rule";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -43,6 +44,7 @@ const navItems = [
   { label: "Tenants", path: "/tenants", icon: <BusinessIcon /> },
   { label: "Customers", path: "/customers", icon: <PeopleIcon /> },
   { label: "Products", path: "/products", icon: <StoreIcon /> },
+  { label: "Distributors", path: "/distributors", icon: <LocalShippingIcon /> },
   { label: "Reward Products", path: "/reward-products", icon: <CardGiftcardIcon /> },
   { label: "Reward Orders", path: "/reward-orders", icon: <RedeemIcon /> },
   { label: "Rules", path: "/rules", icon: <RuleIcon /> },

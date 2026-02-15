@@ -12,6 +12,7 @@ import { CustomersPage } from "./pages/CustomersPage";
 import { CustomerTransactionsPage } from "./pages/CustomerTransactionsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { ProductsPage } from "./pages/ProductsPage";
+import { DistributorsPage } from "./pages/DistributorsPage";
 import { RewardProductsPage } from "./pages/RewardProductsPage";
 import { RewardProductEditPage } from "./pages/RewardProductEditPage";
 import { RewardOrdersPage } from "./pages/RewardOrdersPage";
@@ -43,6 +44,7 @@ const App: React.FC = () => {
                   <Route path="/customers/:customerId/transactions" element={<CustomerTransactionsPage />} />
                   <Route path="/users" element={<UsersPage />} />
                   <Route path="/products" element={<ProductsPage />} />
+                  <Route path="/distributors" element={<DistributorsPage />} />
                   <Route path="/reward-products" element={<RewardProductsPage />} />
                   <Route path="/reward-products/:id" element={<RewardProductEditPage />} />
                   <Route path="/reward-orders" element={<RewardOrdersPage />} />

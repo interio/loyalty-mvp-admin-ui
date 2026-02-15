@@ -34,6 +34,7 @@ type Product = {
   id: string;
   tenantId: string;
   distributorId: string;
+  distributorDisplayName?: string | null;
   sku: string;
   gtin?: string | null;
   name: string;
@@ -121,6 +122,7 @@ export const ProductsView: React.FC = () => {
                 <TableRow>
                   <TableCell />
                   <TableCell>Name</TableCell>
+                  <TableCell>Distributor</TableCell>
                   <TableCell>SKU</TableCell>
                   <TableCell>GTIN</TableCell>
                   <TableCell>Cost</TableCell>
@@ -139,13 +141,14 @@ export const ProductsView: React.FC = () => {
                           </IconButton>
                         </TableCell>
                         <TableCell>{product.name}</TableCell>
+                        <TableCell>{product.distributorDisplayName ?? "—"}</TableCell>
                         <TableCell>{product.sku}</TableCell>
                         <TableCell>{product.gtin ?? "—"}</TableCell>
                         <TableCell>{product.cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                         <TableCell>{formatDate(product.updatedAt)}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
+                        <TableCell colSpan={7} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
                               <DetailSection title="Product details">
@@ -172,6 +175,14 @@ export const ProductsView: React.FC = () => {
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.distributorId}
+                                    </Typography>
+                                  </Grid>
+                                  <Grid item xs={12} sm={6} md={4}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                      Distributor
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                      {product.distributorDisplayName ?? "—"}
                                     </Typography>
                                   </Grid>
                                   <Grid item xs={12} sm={6} md={4}>
@@ -254,7 +265,7 @@ export const ProductsView: React.FC = () => {
                 })}
                 {!loading && products.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={7}>
                       <Typography variant="body2" color="text.secondary">
                         {debouncedSearch ? "No products match this search." : "No products available."}
                       </Typography>

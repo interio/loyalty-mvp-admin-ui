@@ -6,6 +6,7 @@ export const PRODUCTS_QUERY = gql`
       id
       tenantId
       distributorId
+      distributorDisplayName
       sku
       gtin
       name
@@ -27,6 +28,7 @@ export const PRODUCTS_PAGE_QUERY = gql`
         id
         tenantId
         distributorId
+        distributorDisplayName
         sku
         gtin
         name
@@ -54,6 +56,7 @@ export const PRODUCTS_SEARCH_QUERY = gql`
       id
       tenantId
       distributorId
+      distributorDisplayName
       sku
       gtin
       name
