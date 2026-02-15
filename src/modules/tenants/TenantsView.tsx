@@ -19,6 +19,14 @@ import {
 } from "@mui/material";
 import { CREATE_TENANT_MUTATION, TENANTS_PAGE_QUERY } from "./queries";
 
+type TenantRow = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+};
+
 export const TenantsView: React.FC = () => {
   const [page, setPage] = useState(1);
   const pageSize = 20;
@@ -27,17 +35,37 @@ export const TenantsView: React.FC = () => {
   });
   const [createTenant, { loading: creating, error: createError }] = useMutation(CREATE_TENANT_MUTATION);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const tenants = data?.tenantsPage?.nodes ?? [];
+  const tenants: TenantRow[] = data?.tenantsPage?.nodes ?? [];
   const pageInfo = data?.tenantsPage?.pageInfo;
+
+  const optionalOrNull = (value: string) => {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     setMessage(null);
-    await createTenant({ variables: { input: { name: name.trim() } } });
+    await createTenant({
+      variables: {
+        input: {
+          name: name.trim(),
+          email: optionalOrNull(email),
+          phone: optionalOrNull(phone),
+          address: optionalOrNull(address),
+        },
+      },
+    });
     setName("");
+    setEmail("");
+    setPhone("");
+    setAddress("");
     setShowForm(false);
     setMessage("Tenant created.");
     setPage(1);
@@ -71,6 +99,24 @@ export const TenantsView: React.FC = () => {
               onChange={(e) => setName(e.target.value)}
               required
             />
+            <TextField
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              label="Phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <TextField
+              label="Address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              multiline
+              minRows={2}
+            />
             {createError && <Alert severity="error">{createError.message}</Alert>}
             {message && <Alert severity="success">{message}</Alert>}
             <Box>
@@ -94,19 +140,25 @@ export const TenantsView: React.FC = () => {
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Address</TableCell>
                 <TableCell>Tenant ID</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {tenants.map((t: any) => (
+              {tenants.map((t) => (
                 <TableRow key={t.id} hover>
                   <TableCell>{t.name}</TableCell>
+                  <TableCell>{t.email ?? "—"}</TableCell>
+                  <TableCell>{t.phone ?? "—"}</TableCell>
+                  <TableCell>{t.address ?? "—"}</TableCell>
                   <TableCell>{t.id}</TableCell>
                 </TableRow>
               ))}
               {!loading && tenants.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={2}>
+                  <TableCell colSpan={5}>
                     <Typography variant="body2" color="text.secondary">
                       No tenants available yet.
                     </Typography>

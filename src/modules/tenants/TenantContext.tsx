@@ -5,6 +5,9 @@ import { TENANTS_QUERY } from "./queries";
 type Tenant = {
   id: string;
   name: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
 };
 
 type TenantContextValue = {

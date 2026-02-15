@@ -5,6 +5,9 @@ export const TENANTS_QUERY = gql`
     tenants {
       id
       name
+      email
+      phone
+      address
     }
   }
 `;
@@ -15,6 +18,9 @@ export const TENANTS_PAGE_QUERY = gql`
       nodes {
         id
         name
+        email
+        phone
+        address
       }
       pageInfo {
         totalCount
@@ -31,6 +37,9 @@ export const CREATE_TENANT_MUTATION = gql`
     createTenant(input: $input) {
       id
       name
+      email
+      phone
+      address
     }
   }
 `;
