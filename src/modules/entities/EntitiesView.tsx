@@ -57,7 +57,7 @@ export const EntitiesView: React.FC = () => {
   }, [location.state, entitiesRefreshed, refetch]);
 
   return (
-    <Card sx={{ borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}>
+    <Card sx={{ borderRadius: 2, boxShadow: "0 4px 14px rgba(195,195,195,0.28)" }}>
       <CardContent>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center" mb={2} gap={2}>
           <Box>
@@ -68,7 +68,6 @@ export const EntitiesView: React.FC = () => {
           </Box>
           <Button
             variant="contained"
-            sx={{ bgcolor: "#0c9b50" }}
             onClick={() => navigate("/entities/new")}
           >
             Add new entity rule
@@ -89,7 +88,7 @@ export const EntitiesView: React.FC = () => {
             <Card
               key={entity.id}
               variant="outlined"
-              sx={{ borderColor: "#e0e7e2", backgroundColor: "#fff" }}
+              sx={{ borderColor: "divider", backgroundColor: "background.paper" }}
             >
               <CardActionArea onClick={() => navigate(`/entities/${entity.id}`)}>
                 <CardContent>

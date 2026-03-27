@@ -282,11 +282,12 @@ export const RuleDetailsPage: React.FC = () => {
     <Box
       key={group.id}
       sx={{
-        border: "1px solid #e0e7e2",
+        border: "1px solid",
+        borderColor: "divider",
         borderRadius: 2,
         p: 2,
         mt: 1,
-        backgroundColor: depth === 0 ? "#fff" : "#f7faf8",
+        backgroundColor: depth === 0 ? "#FFFFFF" : "#F5F6F4",
       }}
     >
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
@@ -454,7 +455,6 @@ export const RuleDetailsPage: React.FC = () => {
               />
               <Button
                 variant="contained"
-                sx={{ bgcolor: "#0c9b50" }}
                 onClick={handleUpdateStatus}
                 disabled={saving || deleting || !activeDirty}
               >

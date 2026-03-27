@@ -7,7 +7,7 @@ type Props = {
 };
 
 export const PlaceholderPage: React.FC<Props> = ({ title, description }) => (
-  <Card sx={{ borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}>
+  <Card sx={{ borderRadius: 2, boxShadow: "0 4px 14px rgba(195,195,195,0.28)" }}>
     <CardContent>
       <Typography variant="h5" gutterBottom>
         {title}

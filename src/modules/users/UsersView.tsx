@@ -159,7 +159,7 @@ export const UsersView: React.FC = () => {
                       <TableRow>
                         <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                            <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
+                            <Box sx={{ px: 3, py: 2, bgcolor: "#F5F6F4", borderTop: "1px solid", borderColor: "divider" }}>
                               <DetailSection title="User details">
                                 <Grid container spacing={2}>
                                   <Grid item xs={12} sm={6} md={4}>

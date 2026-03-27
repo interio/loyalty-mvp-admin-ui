@@ -73,7 +73,7 @@ export const TenantsView: React.FC = () => {
   };
 
   return (
-    <Card sx={{ borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}>
+    <Card sx={{ borderRadius: 2, boxShadow: "0 4px 14px rgba(195,195,195,0.28)" }}>
       <CardContent>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center" mb={2} gap={2}>
           <Box>
@@ -82,7 +82,7 @@ export const TenantsView: React.FC = () => {
               Create and manage tenants for the loyalty platform.
             </Typography>
           </Box>
-          <Button variant="contained" sx={{ bgcolor: "#0c9b50" }} onClick={() => setShowForm((v) => !v)}>
+          <Button variant="contained" onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Close form" : "Create tenant"}
           </Button>
         </Stack>
@@ -91,7 +91,7 @@ export const TenantsView: React.FC = () => {
           <Box
             component="form"
             onSubmit={handleCreate}
-            sx={{ mt: 2, mb: 3, p: 2, border: "1px solid #e0e7e2", borderRadius: 2, display: "flex", flexDirection: "column", gap: 2 }}
+            sx={{ mt: 2, mb: 3, p: 2, border: "1px solid", borderColor: "divider", borderRadius: 2, display: "flex", flexDirection: "column", gap: 2 }}
           >
             <TextField
               label="Tenant name"
@@ -120,7 +120,7 @@ export const TenantsView: React.FC = () => {
             {createError && <Alert severity="error">{createError.message}</Alert>}
             {message && <Alert severity="success">{message}</Alert>}
             <Box>
-              <Button type="submit" variant="contained" sx={{ bgcolor: "#0c9b50" }} disabled={creating}>
+              <Button type="submit" variant="contained" disabled={creating}>
                 {creating ? "Creating..." : "Save tenant"}
               </Button>
             </Box>

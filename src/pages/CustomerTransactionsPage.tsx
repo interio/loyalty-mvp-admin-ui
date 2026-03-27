@@ -221,7 +221,6 @@ export const CustomerTransactionsPage: React.FC = () => {
                   <Button
                     size="small"
                     variant="contained"
-                    sx={{ bgcolor: "#0c9b50" }}
                     onClick={openAdjustDialog}
                     disabled={!customerId}
                   >
@@ -343,7 +342,7 @@ export const CustomerTransactionsPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAdjustOpen(false)}>Cancel</Button>
-          <Button variant="contained" sx={{ bgcolor: "#0c9b50" }} onClick={submitAdjustment} disabled={adjusting}>
+          <Button variant="contained" onClick={submitAdjustment} disabled={adjusting}>
             {adjusting ? "Saving..." : "Apply"}
           </Button>
         </DialogActions>

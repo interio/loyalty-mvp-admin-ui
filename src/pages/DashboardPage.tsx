@@ -59,10 +59,10 @@ export const DashboardPage: React.FC = () => {
   return (
     <Box>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: "#0f3d23" }}>
+        <Typography variant="h4" sx={{ fontWeight: 700 }}>
           Dashboard
         </Typography>
-        <Typography variant="body2" sx={{ color: "#4a5f52" }}>
+        <Typography variant="body2" color="text.secondary">
           Overview of sales and orders activity (stub data).
         </Typography>
       </Box>
@@ -74,27 +74,27 @@ export const DashboardPage: React.FC = () => {
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                 Sales Information
               </Typography>
-              <Typography variant="body2" sx={{ color: "#6b7c72", mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Stub metrics for loyalty redemptions.
               </Typography>
 
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#f4f8f5" }}>
-                    <Typography variant="overline" sx={{ color: "#567a66" }}>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="overline" color="text.secondary">
                       Total Points Spent
                     </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700, color: "#0f3d23" }}>
+                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
                       128,400
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#f4f8f5" }}>
-                    <Typography variant="overline" sx={{ color: "#567a66" }}>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="overline" color="text.secondary">
                       Average Redemption
                     </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700, color: "#0f3d23" }}>
+                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
                       320 pts
                     </Typography>
                   </Box>
@@ -143,16 +143,16 @@ export const DashboardPage: React.FC = () => {
                   </Select>
                 </FormControl>
               </Box>
-              <Typography variant="body2" sx={{ color: "#6b7c72", mb: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Stub chart with time on the X axis and order volume on the Y axis.
               </Typography>
 
-              <Box sx={{ border: "1px dashed #c9d6cf", borderRadius: 2, p: 2 }}>
+              <Box sx={{ border: "1px dashed", borderColor: "divider", borderRadius: 2, p: 2 }}>
                 <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
-                  <Typography variant="caption" sx={{ color: "#6b7c72" }}>
+                  <Typography variant="caption" color="text.secondary">
                     Orders
                   </Typography>
-                  <Typography variant="caption" sx={{ color: "#6b7c72" }}>
+                  <Typography variant="caption" color="text.secondary">
                     Time
                   </Typography>
                 </Box>
@@ -165,15 +165,15 @@ export const DashboardPage: React.FC = () => {
                           sx={{
                             width: "100%",
                             height: `${(item.orders / maxOrders) * 100}%`,
-                            bgcolor: "#0c9b50",
+                            bgcolor: "primary.main",
                             borderRadius: 1,
                           }}
                         />
                       </Box>
-                      <Typography variant="caption" sx={{ color: "#4a5f52" }}>
+                      <Typography variant="caption" color="text.secondary">
                         {item.label}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: "#6b7c72" }}>
+                      <Typography variant="caption" color="text.secondary">
                         {item.orders}
                       </Typography>
                     </Box>

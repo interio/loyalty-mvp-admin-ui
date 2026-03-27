@@ -327,7 +327,6 @@ export const EntityEditView: React.FC = () => {
               <Typography variant="h6">Attributes</Typography>
               <Button
                 variant="contained"
-                sx={{ bgcolor: "#0c9b50" }}
                 onClick={() => entity && navigate(`/entities/${entity.id}/attributes/new`)}
                 disabled={!entity}
               >

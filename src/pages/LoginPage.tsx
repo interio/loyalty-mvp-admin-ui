@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Avatar, Box, Button, Container, TextField, Typography, Paper } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import StarIcon from "@mui/icons-material/Star";
+import { alpha } from "@mui/material/styles";
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -31,13 +33,30 @@ export const LoginPage: React.FC = () => {
 
   return (
     <Container component="main" maxWidth="xs" sx={{ display: "flex", alignItems: "center", minHeight: "100vh" }}>
-      <Paper elevation={4} sx={{ p: 4, width: "100%", borderRadius: 2 }}>
+      <Paper
+        elevation={0}
+        sx={(theme) => ({
+          p: 4,
+          width: "100%",
+          borderRadius: 3,
+          border: `1px solid ${theme.palette.divider}`,
+          boxShadow: "0 4px 14px rgba(195,195,195,0.28)",
+          backgroundColor: theme.palette.background.paper,
+        })}
+      >
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-          <Avatar sx={{ m: 1, bgcolor: "#0c9b50" }}>
+          <Avatar
+            sx={(theme) => ({
+              m: 1,
+              bgcolor: alpha(theme.palette.primary.main, 0.22),
+              color: theme.palette.primary.light,
+              border: `1px solid ${alpha(theme.palette.primary.light, 0.5)}`,
+            })}
+          >
             <LockOutlinedIcon />
           </Avatar>
-          <Typography component="h1" variant="h5" sx={{ color: "#0b1f14" }}>
-            Loyalty Login
+          <Typography component="h1" variant="h5" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            Loyalty Login <StarIcon sx={{ color: "#FF2B00", fontSize: 18 }} />
           </Typography>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: "100%", display: "flex", flexDirection: "column", gap: 2 }}>
             <TextField
@@ -67,10 +86,10 @@ export const LoginPage: React.FC = () => {
                 {error}
               </Typography>
             )}
-            <Button type="submit" fullWidth variant="contained" sx={{ mt: 1, bgcolor: "#0c9b50" }} disabled={loading}>
+            <Button type="submit" fullWidth variant="contained" sx={{ mt: 1 }} disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
-            <Typography variant="body2" sx={{ color: "#4e5c55" }}>
+            <Typography variant="body2" color="text.secondary">
               Dummy SSO placeholder — will be replaced by Entra ID.
             </Typography>
           </Box>

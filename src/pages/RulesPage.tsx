@@ -867,11 +867,12 @@ export const RulesPage: React.FC = () => {
     <Box
       key={group.id}
       sx={{
-        border: "1px solid #e0e7e2",
+        border: "1px solid",
+        borderColor: "divider",
         borderRadius: 2,
         p: 2,
         mt: 1,
-        backgroundColor: depth === 0 ? "#fff" : "#f7faf8",
+        backgroundColor: depth === 0 ? "#FFFFFF" : "#F5F6F4",
       }}
     >
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
@@ -920,7 +921,7 @@ export const RulesPage: React.FC = () => {
   );
 
   return (
-    <Card sx={{ borderRadius: 2, boxShadow: "0 8px 24px rgba(0,0,0,0.06)" }}>
+    <Card sx={{ borderRadius: 2, boxShadow: "0 4px 14px rgba(195,195,195,0.28)" }}>
       <CardContent>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center" mb={2} gap={2}>
           <Box>
@@ -933,7 +934,7 @@ export const RulesPage: React.FC = () => {
                   : "Select a tenant to view rules."}
             </Typography>
           </Box>
-          <Button variant="contained" sx={{ bgcolor: "#0c9b50" }} onClick={() => setShowForm((v) => !v)} disabled={!selectedTenantId}>
+          <Button variant="contained" onClick={() => setShowForm((v) => !v)} disabled={!selectedTenantId}>
             {showForm ? "Close form" : "Create rule"}
           </Button>
         </Stack>
@@ -942,7 +943,7 @@ export const RulesPage: React.FC = () => {
           <Box
             component="form"
             onSubmit={handleSubmit}
-            sx={{ mt: 2, mb: 3, p: 2, border: "1px solid #e0e7e2", borderRadius: 2, display: "flex", flexDirection: "column", gap: 2 }}
+            sx={{ mt: 2, mb: 3, p: 2, border: "1px solid", borderColor: "divider", borderRadius: 2, display: "flex", flexDirection: "column", gap: 2 }}
           >
             <TextField
               label="Rule name"
@@ -1010,7 +1011,7 @@ export const RulesPage: React.FC = () => {
             )}
 
             {isComplexRule && (
-              <Box sx={{ border: "1px solid #e0e7e2", borderRadius: 2, p: 2 }}>
+              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
                 <Stepper activeStep={complexStep} sx={{ mb: 2 }}>
                   <Step>
                     <StepLabel>Rule details</StepLabel>
@@ -1093,7 +1094,6 @@ export const RulesPage: React.FC = () => {
                   {complexStep === 0 && (
                     <Button
                       variant="contained"
-                      sx={{ bgcolor: "#0c9b50" }}
                       onClick={() => setComplexStep(1)}
                       disabled={!complexDetailsValid}
                     >
@@ -1101,7 +1101,7 @@ export const RulesPage: React.FC = () => {
                     </Button>
                   )}
                   {complexStep === 1 && (
-                    <Button type="submit" variant="contained" sx={{ bgcolor: "#0c9b50" }} disabled={disabled}>
+                    <Button type="submit" variant="contained" disabled={disabled}>
                       {loading ? "Saving..." : "Save rule"}
                     </Button>
                   )}
@@ -1114,7 +1114,7 @@ export const RulesPage: React.FC = () => {
 
             {!isComplexRule && (
               <Box>
-                <Button type="submit" variant="contained" sx={{ bgcolor: "#0c9b50" }} disabled={disabled}>
+                <Button type="submit" variant="contained" disabled={disabled}>
                   {loading ? "Saving..." : "Save rule"}
                 </Button>
               </Box>

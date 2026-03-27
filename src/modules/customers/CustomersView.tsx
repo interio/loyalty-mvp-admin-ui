@@ -323,7 +323,7 @@ export const CustomersView: React.FC = () => {
                       <TableRow>
                         <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                            <Box sx={{ px: 3, py: 2, bgcolor: "#f7faf8", borderTop: "1px solid #e0e7e2" }}>
+                            <Box sx={{ px: 3, py: 2, bgcolor: "#F5F6F4", borderTop: "1px solid", borderColor: "divider" }}>
                               <Grid container spacing={2}>
                                 <Grid item xs={12} md={6}>
                                   <Stack spacing={2}>
@@ -365,7 +365,6 @@ export const CustomersView: React.FC = () => {
                                             <Button
                                               size="small"
                                               variant="contained"
-                                              sx={{ bgcolor: "#0c9b50" }}
                                               onClick={() => saveTier(customer)}
                                               disabled={
                                                 !selectedTenantId ||
@@ -418,7 +417,6 @@ export const CustomersView: React.FC = () => {
                                             <Button
                                               size="small"
                                               variant="contained"
-                                              sx={{ bgcolor: "#0c9b50" }}
                                               onClick={() => openAdjustDialog(customer.id)}
                                             >
                                               Manual adjustment
@@ -515,7 +513,7 @@ export const CustomersView: React.FC = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setAdjustOpen(false)}>Cancel</Button>
-          <Button variant="contained" sx={{ bgcolor: "#0c9b50" }} onClick={submitAdjustment} disabled={adjusting}>
+          <Button variant="contained" onClick={submitAdjustment} disabled={adjusting}>
             {adjusting ? "Saving..." : "Apply"}
           </Button>
         </DialogActions>

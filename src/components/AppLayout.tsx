@@ -29,6 +29,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import RedeemIcon from "@mui/icons-material/Redeem";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import StarIcon from "@mui/icons-material/Star";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
@@ -89,10 +90,11 @@ const AppLayoutContent: React.FC = () => {
 
   const drawer = (
     <div>
-      <Toolbar sx={{ color: "#0f3d23" }}>
-        <Box component="img" src={logoUrl} alt="Eazle logo" sx={{ width: 60, height: "auto", mr: 1 }} />
-        <Typography variant="h6" noWrap component="div">
+      <Toolbar sx={{ color: "text.primary" }}>
+        <Box component="img" src={logoUrl} alt="Eazle logo" sx={{ width: 64, height: "auto", display: "block", mr: 1.25 }} />
+        <Typography variant="h6" noWrap component="div" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           Loyalty
+          <StarIcon sx={{ color: "#FF2B00", fontSize: 15 }} />
         </Typography>
       </Toolbar>
       <Divider />
@@ -157,13 +159,13 @@ const AppLayoutContent: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f0f5f1" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "background.default" }}>
       <CssBaseline />
       <AppBar
         position="fixed"
         sx={{
           ml: { sm: `${drawerWidth}px` },
-          background: "linear-gradient(90deg, #006e3a 0%, #0c9b50 100%)",
+          boxShadow: "none",
         }}
       >
         <Toolbar>
@@ -176,28 +178,29 @@ const AppLayoutContent: React.FC = () => {
           >
             <MenuIcon />
           </IconButton>
-          <Box component="img" src={logoUrl} alt="Eazle logo" sx={{ width: 60, height: "auto", mr: 1 }} />
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+          <Box component="img" src={logoUrl} alt="Eazle logo" sx={{ width: 64, height: "auto", display: "block", mr: 1.25 }} />
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, display: "flex", alignItems: "center", gap: 0.5 }}>
             Loyalty
+            <StarIcon sx={{ color: "#FF2B00", fontSize: 16 }} />
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <FormControl
               size="small"
               variant="outlined"
-              sx={{
+              sx={(theme) => ({
                 minWidth: 200,
                 "& .MuiInputBase-root": {
-                  color: "#fff",
-                  borderColor: "rgba(255,255,255,0.6)",
+                  color: theme.palette.text.primary,
+                  backgroundColor: theme.palette.background.paper,
                 },
                 "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "rgba(255,255,255,0.6)",
+                  borderColor: theme.palette.divider,
                 },
                 "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#fff",
+                  borderColor: theme.palette.divider,
                 },
-                "& .MuiSvgIcon-root": { color: "#fff" },
-              }}
+                "& .MuiSvgIcon-root": { color: "#5F6B63" },
+              })}
             >
               <Select
                 value={selectedTenantId ?? ""}
@@ -230,7 +233,7 @@ const AppLayoutContent: React.FC = () => {
                   size="small"
                   startIcon={<LogoutIcon />}
                   onClick={handleLogout}
-                  sx={{ color: "#fff", borderColor: "rgba(255,255,255,0.7)" }}
+                  sx={(theme) => ({ color: theme.palette.text.primary, borderColor: theme.palette.divider })}
                 >
                   Logout
                 </Button>
@@ -260,7 +263,8 @@ const AppLayoutContent: React.FC = () => {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
-              borderRight: "1px solid #e0e7e2",
+              borderRight: "1px solid",
+              borderColor: "divider",
             },
           }}
           open
