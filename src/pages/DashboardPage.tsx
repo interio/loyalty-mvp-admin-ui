@@ -8,12 +8,13 @@ import {
   Grid2,
   MenuItem,
   Select,
-  Typography,
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableRow } from "@mui/material";
+  TableRow,
+  Typography,
+} from "@mui/material";
 
 type OrdersRange = "24h" | "7d" | "30d";
 
@@ -39,19 +40,34 @@ const ordersData: Record<OrdersRange, { label: string; orders: number }[]> = {
     { label: "Week 2", orders: 710 },
     { label: "Week 3", orders: 580 },
     { label: "Week 4", orders: 760 },
-  ] };
+  ],
+};
 
-const lastRedemptions = [
-  { customer: "Green Harbor Pub", item: "Keg - Heineken 50L", points: 1200 },
-  { customer: "Brew & Co", item: "Loyalty Voucher Pack", points: 540 },
-  { customer: "Dockside Taproom", item: "Branded Glassware", points: 320 },
-  { customer: "The Barrel House", item: "Promo Crate", points: 780 },
-  { customer: "Sunset Lounge", item: "Cider Sampler", points: 460 },
+const ordersSummaryData: Record<OrdersRange, { totalPointsSpent: string; averageRedemption: string }> = {
+  "24h": { totalPointsSpent: "12,840", averageRedemption: "287 pts" },
+  "7d": { totalPointsSpent: "88,320", averageRedemption: "314 pts" },
+  "30d": { totalPointsSpent: "368,410", averageRedemption: "329 pts" },
+};
+
+const usersOverview = [
+  { label: "Total customers", value: "1,248" },
+  { label: "Total users", value: "3,964" },
+  { label: "Active users (30d)", value: "2,781" },
+  { label: "New users this month", value: "186" },
+];
+
+const customerUserStats = [
+  { customer: "Green Harbor Pub", users: 38, activeUsers: 29, newUsers: 4 },
+  { customer: "Dockside Taproom", users: 31, activeUsers: 25, newUsers: 6 },
+  { customer: "The Barrel House", users: 28, activeUsers: 20, newUsers: 3 },
+  { customer: "Sunset Lounge", users: 22, activeUsers: 16, newUsers: 2 },
+  { customer: "Brew & Co", users: 19, activeUsers: 14, newUsers: 1 },
 ];
 
 export const DashboardPage: React.FC = () => {
   const [range, setRange] = React.useState<OrdersRange>("24h");
   const data = ordersData[range];
+  const summary = ordersSummaryData[range];
   const maxOrders = Math.max(...data.map((item) => item.orders));
 
   return (
@@ -61,7 +77,7 @@ export const DashboardPage: React.FC = () => {
           Dashboard
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Overview of sales and orders activity (stub data).
+          Overview of customer, user, and order activity (stub data).
         </Typography>
       </Box>
 
@@ -70,53 +86,47 @@ export const DashboardPage: React.FC = () => {
           <Card sx={{ height: "100%" }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                Sales Information
+                Users Information
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Stub metrics for loyalty redemptions.
+                Stub metrics for customers and users.
               </Typography>
 
               <Grid2 container spacing={2}>
-                <Grid2 size={{ xs: 12, sm: 6 }}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
-                    <Typography variant="overline" color="text.secondary">
-                      Total Points Spent
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                      128,400
-                    </Typography>
-                  </Box>
-                </Grid2>
-                <Grid2 size={{ xs: 12, sm: 6 }}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
-                    <Typography variant="overline" color="text.secondary">
-                      Average Redemption
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                      320 pts
-                    </Typography>
-                  </Box>
-                </Grid2>
+                {usersOverview.map((metric) => (
+                  <Grid2 key={metric.label} size={{ xs: 12, sm: 6 }}>
+                    <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
+                      <Typography variant="overline" color="text.secondary">
+                        {metric.label}
+                      </Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                        {metric.value}
+                      </Typography>
+                    </Box>
+                  </Grid2>
+                ))}
               </Grid2>
 
               <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-                  Last Redemption Orders
+                  Customer User Breakdown
                 </Typography>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell>Customer</TableCell>
-                      <TableCell>Item</TableCell>
-                      <TableCell align="right">Points Spent</TableCell>
+                      <TableCell align="right">Total Users</TableCell>
+                      <TableCell align="right">Active (30d)</TableCell>
+                      <TableCell align="right">New This Month</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {lastRedemptions.map((row) => (
-                      <TableRow key={`${row.customer}-${row.item}`}>
+                    {customerUserStats.map((row) => (
+                      <TableRow key={row.customer}>
                         <TableCell>{row.customer}</TableCell>
-                        <TableCell>{row.item}</TableCell>
-                        <TableCell align="right">{row.points}</TableCell>
+                        <TableCell align="right">{row.users}</TableCell>
+                        <TableCell align="right">{row.activeUsers}</TableCell>
+                        <TableCell align="right">{row.newUsers}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -164,7 +174,8 @@ export const DashboardPage: React.FC = () => {
                             width: "100%",
                             height: `${(item.orders / maxOrders) * 100}%`,
                             bgcolor: "primary.main",
-                            borderRadius: 1 }}
+                            borderRadius: 1,
+                          }}
                         />
                       </Box>
                       <Typography variant="caption" color="text.secondary">
@@ -177,6 +188,29 @@ export const DashboardPage: React.FC = () => {
                   ))}
                 </Box>
               </Box>
+
+              <Grid2 container spacing={2} sx={{ mt: 2 }}>
+                <Grid2 size={{ xs: 12, sm: 6 }}>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="overline" color="text.secondary">
+                      Total Points Spent
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {summary.totalPointsSpent}
+                    </Typography>
+                  </Box>
+                </Grid2>
+                <Grid2 size={{ xs: 12, sm: 6 }}>
+                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
+                    <Typography variant="overline" color="text.secondary">
+                      Average Redemption
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {summary.averageRedemption}
+                    </Typography>
+                  </Box>
+                </Grid2>
+              </Grid2>
             </CardContent>
           </Card>
         </Grid2>
