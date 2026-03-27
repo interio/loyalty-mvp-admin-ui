@@ -37,7 +37,7 @@ type Product = {
   sku: string;
   gtin?: string | null;
   name: string;
-  cost: number;
+  cost?: number | null;
   createdAt?: string;
   updatedAt?: string;
   attributes?: { key: string; value?: string | null }[];
@@ -122,7 +122,6 @@ export const ProductsView: React.FC = () => {
                   <TableCell>Distributor</TableCell>
                   <TableCell>SKU</TableCell>
                   <TableCell>GTIN</TableCell>
-                  <TableCell>Cost</TableCell>
                   <TableCell>Updated</TableCell>
                 </TableRow>
               </TableHead>
@@ -141,11 +140,10 @@ export const ProductsView: React.FC = () => {
                         <TableCell>{product.distributorDisplayName ?? "—"}</TableCell>
                         <TableCell>{product.sku}</TableCell>
                         <TableCell>{product.gtin ?? "—"}</TableCell>
-                        <TableCell>{product.cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                         <TableCell>{formatDate(product.updatedAt)}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell colSpan={7} sx={{ p: 0, border: 0 }}>
+                        <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#F5F6F4", borderTop: "1px solid", borderColor: "divider" }}>
                               <DetailSection title="Product details">
@@ -261,7 +259,7 @@ export const ProductsView: React.FC = () => {
                 })}
                 {!loading && products.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={6}>
                       <Typography variant="body2" color="text.secondary">
                         {debouncedSearch ? "No products match this search." : "No products available."}
                       </Typography>
