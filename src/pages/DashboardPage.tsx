@@ -1,11 +1,15 @@
 import React from "react";
+import { useQuery } from "@apollo/client";
+import { useNavigate } from "react-router-dom";
 import {
+  Alert,
   Box,
   Card,
   CardContent,
   Divider,
   FormControl,
   Grid2,
+  LinearProgress,
   MenuItem,
   Select,
   Table,
@@ -15,6 +19,8 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import { useTenant } from "../modules/tenants/TenantContext";
+import { CAMPAIGN_RULES_BY_TENANT_QUERY } from "../modules/rules/queries";
 
 type OrdersRange = "24h" | "7d" | "30d";
 
@@ -64,11 +70,112 @@ const customerUserStats = [
   { customer: "Brew & Co", users: 19, activeUsers: 14, newUsers: 1 },
 ];
 
+type CampaignRule = {
+  id: string;
+  ruleName: string;
+  startDate: string;
+  endDate?: string | null;
+};
+
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { selectedTenantId } = useTenant();
   const [range, setRange] = React.useState<OrdersRange>("24h");
   const data = ordersData[range];
   const summary = ordersSummaryData[range];
   const maxOrders = Math.max(...data.map((item) => item.orders));
+
+  const { data: campaignsData, loading: campaignsLoading, error: campaignsError } = useQuery(CAMPAIGN_RULES_BY_TENANT_QUERY, {
+    variables: { tenantId: selectedTenantId ?? "" },
+    skip: !selectedTenantId,
+  });
+
+  const campaigns: CampaignRule[] = campaignsData?.campaignRulesByTenant ?? [];
+
+  const { pastCampaigns, currentCampaigns, futureCampaigns } = React.useMemo(() => {
+    const now = Date.now();
+    const past: CampaignRule[] = [];
+    const current: CampaignRule[] = [];
+    const future: CampaignRule[] = [];
+
+    for (const campaign of campaigns) {
+      const startTs = new Date(campaign.startDate).getTime();
+      const endTs = campaign.endDate ? new Date(campaign.endDate).getTime() : null;
+
+      if (startTs > now) {
+        future.push(campaign);
+        continue;
+      }
+
+      if (endTs !== null && endTs < now) {
+        past.push(campaign);
+        continue;
+      }
+
+      current.push(campaign);
+    }
+
+    return { pastCampaigns: past, currentCampaigns: current, futureCampaigns: future };
+  }, [campaigns]);
+
+  const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString() : "No end date");
+
+  const renderCampaignGroup = (
+    title: string,
+    items: CampaignRule[],
+    options: { showStartDate: boolean; showEndDate: boolean },
+  ) => (
+    <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider", height: "100%" }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+        {title}
+      </Typography>
+      {items.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          No campaigns.
+        </Typography>
+      ) : (
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              {options.showStartDate && <TableCell>Start</TableCell>}
+              {options.showEndDate && <TableCell>End</TableCell>}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {items.map((campaign) => (
+              <TableRow
+                key={campaign.id}
+                hover
+                onClick={() => navigate(`/rules/${campaign.id}`)}
+                sx={{
+                  cursor: "pointer",
+                  transition: "background-color 160ms ease",
+                  "& td": {
+                    transition: "color 160ms ease",
+                  },
+                  "&:hover": {
+                    bgcolor: "rgba(0, 130, 0, 0.12)",
+                  },
+                  "&:hover td": {
+                    color: "primary.main",
+                  },
+                  "&:hover td:first-of-type": {
+                    textDecoration: "underline",
+                    textDecorationThickness: "1px",
+                  },
+                }}
+              >
+                <TableCell>{campaign.ruleName}</TableCell>
+                {options.showStartDate && <TableCell>{formatDate(campaign.startDate)}</TableCell>}
+                {options.showEndDate && <TableCell>{formatDate(campaign.endDate)}</TableCell>}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </Box>
+  );
 
   return (
     <Box>
@@ -211,6 +318,39 @@ export const DashboardPage: React.FC = () => {
                   </Box>
                 </Grid2>
               </Grid2>
+            </CardContent>
+          </Card>
+        </Grid2>
+      </Grid2>
+
+      <Grid2 container spacing={3} sx={{ mt: 3 }}>
+        <Grid2 size={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                Campaigns
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Campaigns are sourced from rules in the backend.
+              </Typography>
+
+              {!selectedTenantId && <Alert severity="info">Select a tenant from the header to load campaigns.</Alert>}
+              {campaignsLoading && <LinearProgress sx={{ mb: 2 }} />}
+              {campaignsError && <Alert severity="error">{campaignsError.message}</Alert>}
+
+              {selectedTenantId && !campaignsLoading && !campaignsError && (
+                <Grid2 container spacing={2}>
+                  <Grid2 size={{ xs: 12, lg: 4 }}>
+                    {renderCampaignGroup("Past Campaigns", pastCampaigns, { showStartDate: false, showEndDate: true })}
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, lg: 4 }}>
+                    {renderCampaignGroup("Current Campaigns", currentCampaigns, { showStartDate: true, showEndDate: true })}
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, lg: 4 }}>
+                    {renderCampaignGroup("Future Campaigns", futureCampaigns, { showStartDate: true, showEndDate: false })}
+                  </Grid2>
+                </Grid2>
+              )}
             </CardContent>
           </Card>
         </Grid2>

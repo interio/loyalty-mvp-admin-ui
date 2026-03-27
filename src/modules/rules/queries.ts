@@ -74,3 +74,14 @@ export const RULE_CONDITION_TREE_FLAT_QUERY = gql`
     }
   }
 `;
+
+export const CAMPAIGN_RULES_BY_TENANT_QUERY = gql`
+  query CampaignRulesByTenant($tenantId: UUID!) {
+    campaignRulesByTenant(tenantId: $tenantId) {
+      id
+      ruleName
+      startDate
+      endDate
+    }
+  }
+`;
