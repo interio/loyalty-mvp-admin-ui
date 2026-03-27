@@ -7,7 +7,7 @@ import {
   CardContent,
   CardHeader,
   Collapse,
-  Grid,
+  Grid2,
   IconButton,
   InputAdornment,
   LinearProgress,
@@ -20,8 +20,7 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
-} from "@mui/material";
+  Typography } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
@@ -54,8 +53,7 @@ export const ProductsView: React.FC = () => {
 
   const { data, loading, error } = useQuery(PRODUCTS_PAGE_QUERY, {
     variables: { tenantId: selectedTenantId ?? "", page, pageSize, search: debouncedSearch || null },
-    skip: !selectedTenantId,
-  });
+    skip: !selectedTenantId });
 
   const products: Product[] = data?.productsPage?.nodes ?? [];
   const pageInfo = data?.productsPage?.pageInfo;
@@ -105,8 +103,7 @@ export const ProductsView: React.FC = () => {
                 <InputAdornment position="start">
                   <SearchIcon color="action" />
                 </InputAdornment>
-              ),
-            }}
+              ) }}
           />
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
             {totalLabel}
@@ -152,80 +149,80 @@ export const ProductsView: React.FC = () => {
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#F5F6F4", borderTop: "1px solid", borderColor: "divider" }}>
                               <DetailSection title="Product details">
-                                <Grid container spacing={2}>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                <Grid2 container spacing={2}>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Product ID
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.id}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Tenant ID
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.tenantId}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Distributor ID
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.distributorId}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Distributor
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.distributorDisplayName ?? "—"}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       SKU
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.sku}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       GTIN
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.gtin ?? "—"}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Cost
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {product.cost?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Created
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {formatDate(product.createdAt)}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Updated
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {formatDate(product.updatedAt)}
                                     </Typography>
-                                  </Grid>
-                                </Grid>
+                                  </Grid2>
+                                </Grid2>
                               </DetailSection>
                               <DetailSection title="Product attributes" sx={{ mt: 2 }}>
                                 {product.attributes && product.attributes.length > 0 ? (
@@ -238,8 +235,7 @@ export const ProductsView: React.FC = () => {
                                       borderRadius: 1,
                                       fontSize: 12,
                                       whiteSpace: "pre-wrap",
-                                      wordBreak: "break-word",
-                                    }}
+                                      wordBreak: "break-word" }}
                                   >
                                     {JSON.stringify(
                                       product.attributes.reduce<Record<string, any>>((acc, kv) => {

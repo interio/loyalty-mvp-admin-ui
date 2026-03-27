@@ -8,7 +8,7 @@ import {
   Card,
   CardContent,
   CardHeader,
-  Grid,
+  Grid2,
   LinearProgress,
   Stack,
   Table,
@@ -16,8 +16,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Typography,
-} from "@mui/material";
+  Typography } from "@mui/material";
 import { DetailSection } from "../components/DetailSection";
 import { useTenant } from "../modules/tenants/TenantContext";
 import { INVOICE_BY_ID_QUERY } from "../modules/invoices/queries";
@@ -48,8 +47,7 @@ export const InvoiceDetailsPage: React.FC = () => {
 
   const { data, loading, error } = useQuery(INVOICE_BY_ID_QUERY, {
     variables: { tenantId: selectedTenantId ?? "", id: invoiceId ?? "" },
-    skip: !selectedTenantId || !invoiceId,
-  });
+    skip: !selectedTenantId || !invoiceId });
 
   const invoice: Invoice | null = data?.invoiceById ?? null;
   const selectedTenantName = useMemo(
@@ -80,8 +78,7 @@ export const InvoiceDetailsPage: React.FC = () => {
   const totals = lines.reduce(
     (acc, line) => ({
       quantity: acc.quantity + (line.quantity || 0),
-      netAmount: acc.netAmount + (line.netAmount || 0),
-    }),
+      netAmount: acc.netAmount + (line.netAmount || 0) }),
     { quantity: 0, netAmount: 0 },
   );
 
@@ -111,112 +108,112 @@ export const InvoiceDetailsPage: React.FC = () => {
           {invoice && (
             <>
               <DetailSection title="Invoice overview">
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={4}>
+                <Grid2 container spacing={2}>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Invoice ID
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.invoiceId}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Tenant ID
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.tenantId}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Customer External ID
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.customerExternalId ?? "—"}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Currency
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.currency ?? "—"}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Status
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.status}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Attempts
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.attemptCount}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Actor Email
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.actorEmail ?? "—"}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Actor External ID
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.actorExternalId ?? "—"}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Occurred At
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {formatDateTime(invoice.occurredAt)}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Received At
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {formatDateTime(invoice.receivedAt)}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Processed At
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {formatDateTime(invoice.processedAt)}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Last Attempt At
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {formatDateTime(invoice.lastAttemptAt)}
                     </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
+                  </Grid2>
+                  <Grid2 size={12}>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                       Error
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.error ?? "—"}
                     </Typography>
-                  </Grid>
-                </Grid>
+                  </Grid2>
+                </Grid2>
               </DetailSection>
 
               <DetailSection title="Line items" sx={{ mt: 2 }}>

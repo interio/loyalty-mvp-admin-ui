@@ -7,7 +7,7 @@ import {
   CardContent,
   CardHeader,
   Collapse,
-  Grid,
+  Grid2,
   IconButton,
   InputAdornment,
   LinearProgress,
@@ -20,8 +20,7 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
-} from "@mui/material";
+  Typography } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
@@ -51,10 +50,8 @@ export const DistributorsView: React.FC = () => {
       tenantId: selectedTenantId ?? "",
       page,
       pageSize,
-      search: debouncedSearch || null,
-    },
-    skip: !selectedTenantId,
-  });
+      search: debouncedSearch || null },
+    skip: !selectedTenantId });
 
   const distributors: Distributor[] = data?.distributorsByTenantPage?.nodes ?? [];
   const pageInfo = data?.distributorsByTenantPage?.pageInfo;
@@ -106,8 +103,7 @@ export const DistributorsView: React.FC = () => {
                 <InputAdornment position="start">
                   <SearchIcon color="action" />
                 </InputAdornment>
-              ),
-            }}
+              ) }}
           />
           {selectedTenantId && (
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -154,48 +150,48 @@ export const DistributorsView: React.FC = () => {
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#F5F6F4", borderTop: "1px solid", borderColor: "divider" }}>
                               <DetailSection title="Distributor details">
-                                <Grid container spacing={2}>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                <Grid2 container spacing={2}>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Distributor ID
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {distributor.id}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Tenant ID
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {distributor.tenantId}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Name
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {distributor.name}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Display Name
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {distributor.displayName}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Created
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {formatDate(distributor.createdAt)}
                                     </Typography>
-                                  </Grid>
-                                </Grid>
+                                  </Grid2>
+                                </Grid2>
                               </DetailSection>
                             </Box>
                           </Collapse>

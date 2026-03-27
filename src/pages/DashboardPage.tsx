@@ -5,7 +5,7 @@ import {
   CardContent,
   Divider,
   FormControl,
-  Grid,
+  Grid2,
   MenuItem,
   Select,
   Typography,
@@ -13,8 +13,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableRow,
-} from "@mui/material";
+  TableRow } from "@mui/material";
 
 type OrdersRange = "24h" | "7d" | "30d";
 
@@ -40,8 +39,7 @@ const ordersData: Record<OrdersRange, { label: string; orders: number }[]> = {
     { label: "Week 2", orders: 710 },
     { label: "Week 3", orders: 580 },
     { label: "Week 4", orders: 760 },
-  ],
-};
+  ] };
 
 const lastRedemptions = [
   { customer: "Green Harbor Pub", item: "Keg - Heineken 50L", points: 1200 },
@@ -67,8 +65,8 @@ export const DashboardPage: React.FC = () => {
         </Typography>
       </Box>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} lg={7}>
+      <Grid2 container spacing={3}>
+        <Grid2 size={{ xs: 12, lg: 7 }}>
           <Card sx={{ height: "100%" }}>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
@@ -78,8 +76,8 @@ export const DashboardPage: React.FC = () => {
                 Stub metrics for loyalty redemptions.
               </Typography>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+              <Grid2 container spacing={2}>
+                <Grid2 size={{ xs: 12, sm: 6 }}>
                   <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
                     <Typography variant="overline" color="text.secondary">
                       Total Points Spent
@@ -88,8 +86,8 @@ export const DashboardPage: React.FC = () => {
                       128,400
                     </Typography>
                   </Box>
-                </Grid>
-                <Grid item xs={12} sm={6}>
+                </Grid2>
+                <Grid2 size={{ xs: 12, sm: 6 }}>
                   <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#F5F6F4", border: "1px solid", borderColor: "divider" }}>
                     <Typography variant="overline" color="text.secondary">
                       Average Redemption
@@ -98,8 +96,8 @@ export const DashboardPage: React.FC = () => {
                       320 pts
                     </Typography>
                   </Box>
-                </Grid>
-              </Grid>
+                </Grid2>
+              </Grid2>
 
               <Box sx={{ mt: 3 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
@@ -126,9 +124,9 @@ export const DashboardPage: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid2>
 
-        <Grid item xs={12} lg={5}>
+        <Grid2 size={{ xs: 12, lg: 5 }}>
           <Card sx={{ height: "100%" }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -166,8 +164,7 @@ export const DashboardPage: React.FC = () => {
                             width: "100%",
                             height: `${(item.orders / maxOrders) * 100}%`,
                             bgcolor: "primary.main",
-                            borderRadius: 1,
-                          }}
+                            borderRadius: 1 }}
                         />
                       </Box>
                       <Typography variant="caption" color="text.secondary">
@@ -182,8 +179,8 @@ export const DashboardPage: React.FC = () => {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Grid2>
+      </Grid2>
     </Box>
   );
 };

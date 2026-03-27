@@ -13,20 +13,18 @@ import {
   DialogTitle,
   Divider,
   FormControlLabel,
-  Grid,
+  Grid2,
   LinearProgress,
   Stack,
   Switch,
   TextField,
-  Typography,
-} from "@mui/material";
+  Typography } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
 import {
   DELETE_REWARD_PRODUCT_MUTATION,
   REWARD_PRODUCT_QUERY,
-  UPSERT_REWARD_PRODUCT_MUTATION,
-} from "./queries";
+  UPSERT_REWARD_PRODUCT_MUTATION } from "./queries";
 
 type RewardProductDetail = {
   id: string;
@@ -70,11 +68,9 @@ export const RewardProductEditView: React.FC = () => {
     data,
     loading,
     error: queryError,
-    refetch,
-  } = useQuery(REWARD_PRODUCT_QUERY, {
+    refetch } = useQuery(REWARD_PRODUCT_QUERY, {
     variables: { tenantId: selectedTenantId ?? "", id: id ?? "" },
-    skip: !selectedTenantId || !id,
-  });
+    skip: !selectedTenantId || !id });
 
   const [upsertRewardProduct] = useMutation(UPSERT_REWARD_PRODUCT_MUTATION);
   const [deleteRewardProduct] = useMutation(DELETE_REWARD_PRODUCT_MUTATION);
@@ -150,8 +146,7 @@ export const RewardProductEditView: React.FC = () => {
             ? null
             : typeof value === "string"
               ? value
-              : JSON.stringify(value),
-      })),
+              : JSON.stringify(value) })),
       { key: "enabled", value: enabled ? "true" : "false" },
     ];
 
@@ -167,10 +162,7 @@ export const RewardProductEditView: React.FC = () => {
             name: trimmedName,
             pointsCost: Math.round(costValue),
             inventoryQuantity: Math.round(stockValue),
-            attributes,
-          },
-        },
-      });
+            attributes } } });
       if (!result.data?.upsertRewardProduct) {
         throw new Error("Failed to save reward product.");
       }
@@ -190,8 +182,7 @@ export const RewardProductEditView: React.FC = () => {
     setError(null);
     try {
       const result = await deleteRewardProduct({
-        variables: { tenantId: selectedTenantId, id: product.id },
-      });
+        variables: { tenantId: selectedTenantId, id: product.id } });
       if (!result.data?.deleteRewardProduct) {
         throw new Error("Failed to delete reward product.");
       }
@@ -244,23 +235,23 @@ export const RewardProductEditView: React.FC = () => {
 
               <Divider />
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+              <Grid2 container spacing={2}>
+                <Grid2 size={{ xs: 12, md: 6 }}>
                   <TextField label="Vendor" value={product.rewardVendor} fullWidth disabled />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 6 }}>
                   <TextField label="SKU" value={product.sku} fullWidth disabled />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 6 }}>
                   <TextField label="GTIN" value={product.gtin ?? ""} fullWidth disabled />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 6 }}>
                   <FormControlLabel
                     control={<Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />}
                     label={enabled ? "Enabled" : "Disabled"}
                   />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 6 }}>
                   <TextField
                     label="Name"
                     value={name}
@@ -268,8 +259,8 @@ export const RewardProductEditView: React.FC = () => {
                     fullWidth
                     required
                   />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 6 }}>
                   <TextField
                     label="Price (points)"
                     type="number"
@@ -278,8 +269,8 @@ export const RewardProductEditView: React.FC = () => {
                     fullWidth
                     required
                   />
-                </Grid>
-                <Grid item xs={12} md={6}>
+                </Grid2>
+                <Grid2 size={{ xs: 12, md: 6 }}>
                   <TextField
                     label="Stock"
                     type="number"
@@ -287,8 +278,8 @@ export const RewardProductEditView: React.FC = () => {
                     onChange={(e) => setStock(e.target.value)}
                     fullWidth
                   />
-                </Grid>
-                <Grid item xs={12}>
+                </Grid2>
+                <Grid2 size={12}>
                   <TextField
                     label="Attributes (JSON)"
                     value={attributesText}
@@ -298,8 +289,8 @@ export const RewardProductEditView: React.FC = () => {
                     minRows={5}
                     helperText="Provide a JSON object. The enabled flag is managed separately."
                   />
-                </Grid>
-              </Grid>
+                </Grid2>
+              </Grid2>
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ pt: 1 }}>
                 <Button variant="contained" onClick={handleSave} disabled={saving || loading}>

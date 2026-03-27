@@ -13,7 +13,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Grid,
+  Grid2,
   IconButton,
   InputAdornment,
   LinearProgress,
@@ -27,8 +27,7 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
-} from "@mui/material";
+  Typography } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
@@ -83,11 +82,9 @@ export const CustomersView: React.FC = () => {
       tenantId: selectedTenantId ?? "",
       page,
       pageSize,
-      search: debouncedSearch || null,
-    },
+      search: debouncedSearch || null },
     skip: !selectedTenantId,
-    notifyOnNetworkStatusChange: true,
-  });
+    notifyOnNetworkStatusChange: true });
   const [loadUsers] = useLazyQuery(USERS_BY_CUSTOMER_QUERY);
   const [manualAdjustPoints, { loading: adjusting }] = useMutation(MANUAL_ADJUST_POINTS_MUTATION);
   const [updateCustomerTier] = useMutation(UPDATE_CUSTOMER_TIER_MUTATION);
@@ -189,17 +186,13 @@ export const CustomersView: React.FC = () => {
             amount: amountValue,
             actorEmail: user?.email ?? null,
             comment: adjustComment.trim() || null,
-            correlationId: adjustCorrelationId.trim() || null,
-          },
-        },
-      });
+            correlationId: adjustCorrelationId.trim() || null } } });
       if (selectedTenantId) {
         await refetch({
           tenantId: selectedTenantId,
           page,
           pageSize,
-          search: debouncedSearch || null,
-        });
+          search: debouncedSearch || null });
       }
       setAdjustOpen(false);
     } catch (err) {
@@ -235,16 +228,12 @@ export const CustomersView: React.FC = () => {
           input: {
             customerId: customer.id,
             tenantId: selectedTenantId,
-            tier,
-          },
-        },
-      });
+            tier } } });
       await refetch({
         tenantId: selectedTenantId,
         page,
         pageSize,
-        search: debouncedSearch || null,
-      });
+        search: debouncedSearch || null });
       setTierDrafts((prev) => ({ ...prev, [customer.id]: tier }));
     } catch (err) {
       setTierErrors((prev) => ({ ...prev, [customer.id]: (err as Error).message }));
@@ -275,8 +264,7 @@ export const CustomersView: React.FC = () => {
                 <InputAdornment position="start">
                   <SearchIcon color="action" />
                 </InputAdornment>
-              ),
-            }}
+              ) }}
           />
           {selectedTenantId && (
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -324,27 +312,27 @@ export const CustomersView: React.FC = () => {
                         <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#F5F6F4", borderTop: "1px solid", borderColor: "divider" }}>
-                              <Grid container spacing={2}>
-                                <Grid item xs={12} md={6}>
+                              <Grid2 container spacing={2}>
+                                <Grid2 size={{ xs: 12, md: 6 }}>
                                   <Stack spacing={2}>
                                     <DetailSection title="Customer details">
-                                      <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={6}>
+                                      <Grid2 container spacing={2}>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField label="Customer ID" value={customer.id} fullWidth size="small" disabled />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField label="Tenant ID" value={customer.tenantId} fullWidth size="small" disabled />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField label="Name" value={customer.name} fullWidth size="small" disabled />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField label="External ID" value={customer.externalId ?? "—"} fullWidth size="small" disabled />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField label="Contact Email" value={customer.contactEmail ?? "—"} fullWidth size="small" disabled />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField
                                             select
                                             label="Tier"
@@ -359,8 +347,8 @@ export const CustomersView: React.FC = () => {
                                               </MenuItem>
                                             ))}
                                           </TextField>
-                                        </Grid>
-                                        <Grid item xs={12}>
+                                        </Grid2>
+                                        <Grid2 size={12}>
                                           <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "center" }}>
                                             <Button
                                               size="small"
@@ -384,28 +372,28 @@ export const CustomersView: React.FC = () => {
                                               {tierErrors[customer.id]}
                                             </Alert>
                                           )}
-                                        </Grid>
-                                      </Grid>
+                                        </Grid2>
+                                      </Grid2>
                                     </DetailSection>
                                     <DetailSection title="Points account">
-                                      <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={6}>
+                                      <Grid2 container spacing={2}>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                             Balance
                                           </Typography>
                                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                             {customer.pointsAccount?.balance ?? 0}
                                           </Typography>
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                             Updated
                                           </Typography>
                                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                             {formatDate(customer.pointsAccount?.updatedAt ?? undefined)}
                                           </Typography>
-                                        </Grid>
-                                        <Grid item xs={12}>
+                                        </Grid2>
+                                        <Grid2 size={12}>
                                           <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
                                             <Button
                                               size="small"
@@ -422,12 +410,12 @@ export const CustomersView: React.FC = () => {
                                               Manual adjustment
                                             </Button>
                                           </Stack>
-                                        </Grid>
-                                      </Grid>
+                                        </Grid2>
+                                      </Grid2>
                                     </DetailSection>
                                   </Stack>
-                                </Grid>
-                                <Grid item xs={12} md={6}>
+                                </Grid2>
+                                <Grid2 size={{ xs: 12, md: 6 }}>
                                   <DetailSection title="Associated users">
                                     {loadingUsersFor === customer.id && <LinearProgress />}
                                     {users?.length === 0 && loadingUsersFor !== customer.id && (
@@ -450,8 +438,8 @@ export const CustomersView: React.FC = () => {
                                       </Stack>
                                     )}
                                   </DetailSection>
-                                </Grid>
-                              </Grid>
+                                </Grid2>
+                              </Grid2>
                             </Box>
                           </Collapse>
                         </TableCell>

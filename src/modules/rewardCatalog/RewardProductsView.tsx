@@ -8,13 +8,12 @@ import {
   CardContent,
   CardHeader,
   Chip,
-  Grid,
+  Grid2,
   LinearProgress,
   Pagination,
   Stack,
   TextField,
-  Typography,
-} from "@mui/material";
+  Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
 import { REWARD_PRODUCTS_PAGE_QUERY } from "./queries";
@@ -54,10 +53,8 @@ export const RewardProductsView: React.FC = () => {
       tenantId: selectedTenantId ?? null,
       page,
       pageSize,
-      search: debouncedSearch || null,
-    },
-    skip: !selectedTenantId,
-  });
+      search: debouncedSearch || null },
+    skip: !selectedTenantId });
 
   const rewardProducts: RewardProduct[] = data?.rewardProductsPage?.nodes ?? [];
   const pageInfo = data?.rewardProductsPage?.pageInfo;
@@ -119,11 +116,11 @@ useEffect(() => {
           )}
           {error && <Alert severity="error">{error.message}</Alert>}
           {loading && <LinearProgress />}
-          <Grid container spacing={2}>
+          <Grid2 container spacing={2}>
             {rewardProducts.map((product) => {
               const enabled = parseEnabled(product.attributes);
               return (
-                <Grid key={product.id} item xs={12} sm={6} md={4}>
+                <Grid2 key={product.id} size={{ xs: 12, sm: 6, md: 4 }}>
                   <Card variant="outlined" sx={{ height: "100%" }}>
                     <CardActionArea onClick={() => handleOpen(product.id)} sx={{ height: "100%" }}>
                       <CardContent sx={{ height: "100%" }}>
@@ -160,17 +157,17 @@ useEffect(() => {
                       </CardContent>
                     </CardActionArea>
                   </Card>
-                </Grid>
+                </Grid2>
               );
             })}
             {!loading && selectedTenantId && rewardProducts.length === 0 && (
-              <Grid item xs={12}>
+              <Grid2 size={12}>
                 <Alert severity="info">
                   {debouncedSearch ? "No reward products match this search." : "No reward products available."}
                 </Alert>
-              </Grid>
+              </Grid2>
             )}
-          </Grid>
+          </Grid2>
           {totalPages > 1 && (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Pagination

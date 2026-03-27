@@ -7,7 +7,7 @@ import {
   CardContent,
   CardHeader,
   Collapse,
-  Grid,
+  Grid2,
   IconButton,
   InputAdornment,
   LinearProgress,
@@ -20,8 +20,7 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Typography,
-} from "@mui/material";
+  Typography } from "@mui/material";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SearchIcon from "@mui/icons-material/Search";
@@ -54,10 +53,8 @@ export const UsersView: React.FC = () => {
       tenantId: selectedTenantId ?? "",
       page,
       pageSize,
-      search: debouncedSearch || null,
-    },
-    skip: !selectedTenantId,
-  });
+      search: debouncedSearch || null },
+    skip: !selectedTenantId });
 
   const users: User[] = data?.usersByTenantPage?.nodes ?? [];
   const pageInfo = data?.usersByTenantPage?.pageInfo;
@@ -107,8 +104,7 @@ export const UsersView: React.FC = () => {
                 <InputAdornment position="start">
                   <SearchIcon color="action" />
                 </InputAdornment>
-              ),
-            }}
+              ) }}
           />
           {selectedTenantId && (
             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
@@ -161,56 +157,56 @@ export const UsersView: React.FC = () => {
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#F5F6F4", borderTop: "1px solid", borderColor: "divider" }}>
                               <DetailSection title="User details">
-                                <Grid container spacing={2}>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                <Grid2 container spacing={2}>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       User ID
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {user.id}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Tenant ID
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {user.tenantId}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Customer
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {user.customer?.name ? `${user.customer.name} (${user.customerId})` : user.customerId}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       External ID
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {user.externalId ?? "—"}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Role
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {user.role ?? "—"}
                                     </Typography>
-                                  </Grid>
-                                  <Grid item xs={12} sm={6} md={4}>
+                                  </Grid2>
+                                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
                                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                                       Created
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                                       {formatDate(user.createdAt)}
                                     </Typography>
-                                  </Grid>
-                                </Grid>
+                                  </Grid2>
+                                </Grid2>
                               </DetailSection>
                             </Box>
                           </Collapse>
