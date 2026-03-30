@@ -13,20 +13,16 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import Collapse from "@mui/material/Collapse";
 import MenuIcon from "@mui/icons-material/Menu";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DashboardCustomizeIcon from "@mui/icons-material/DashboardCustomize";
 import PeopleIcon from "@mui/icons-material/People";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import StoreIcon from "@mui/icons-material/Store";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
 import RuleIcon from "@mui/icons-material/Rule";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BusinessIcon from "@mui/icons-material/Business";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import RedeemIcon from "@mui/icons-material/Redeem";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import StarIcon from "@mui/icons-material/Star";
@@ -39,7 +35,6 @@ import { TenantProvider, useTenant } from "../modules/tenants/TenantContext";
 
 const drawerWidth = 240;
 const logoUrl = new URL("../assets/eazle_logo_transparent.png", import.meta.url).href;
-const showUsersMenu = false;
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: <DashboardCustomizeIcon /> },
@@ -74,20 +69,9 @@ const AppLayoutContent: React.FC = () => {
     navigate("/login");
   };
 
-  const isCustomersActive = location.pathname === "/customers" || location.pathname === "/users";
   const isRewardProductsActive = location.pathname.startsWith("/reward-products");
   const isRewardOrdersActive = location.pathname.startsWith("/reward-orders");
   const isEntitiesActive = location.pathname.startsWith("/entities");
-  const [customersOpen, setCustomersOpen] = React.useState(isCustomersActive);
-  React.useEffect(() => {
-    setCustomersOpen(isCustomersActive);
-  }, [isCustomersActive]);
-
-  const handleCustomersClick = () => {
-    setCustomersOpen(true);
-    navigate("/customers");
-    setMobileOpen(false);
-  };
 
   const drawer = (
     <div>
@@ -101,47 +85,15 @@ const AppLayoutContent: React.FC = () => {
       <Divider />
       <List>
         {navItems.map((item) => {
-          if (item.path === "/customers") {
-            return (
-              <React.Fragment key={item.path}>
-                <ListItem disablePadding>
-                  <ListItemButton onClick={handleCustomersClick} selected={isCustomersActive}>
-                    <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.label} />
-                    {customersOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                  </ListItemButton>
-                </ListItem>
-                <Collapse in={customersOpen} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding>
-                    {showUsersMenu && (
-                      <ListItem disablePadding>
-                        <ListItemButton
-                          component={RouterLink}
-                          to="/users"
-                          selected={location.pathname === "/users"}
-                          sx={{ pl: 4 }}
-                          onClick={() => setMobileOpen(false)}
-                        >
-                          <ListItemIcon>
-                            <AccountCircleIcon />
-                          </ListItemIcon>
-                          <ListItemText primary="Users" />
-                        </ListItemButton>
-                      </ListItem>
-                    )}
-                  </List>
-                </Collapse>
-              </React.Fragment>
-            );
-          }
-
           return (
             <ListItem key={item.path} disablePadding>
               <ListItemButton
                 component={RouterLink}
                 to={item.path}
                 selected={
-                  item.path === "/reward-products"
+                  item.path === "/customers"
+                    ? location.pathname === "/customers" || location.pathname === "/users"
+                    : item.path === "/reward-products"
                     ? isRewardProductsActive
                     : item.path === "/reward-orders"
                       ? isRewardOrdersActive
