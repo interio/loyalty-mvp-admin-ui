@@ -4,16 +4,20 @@ import {
   Alert,
   Box,
   Card,
-  CardActionArea,
-  CardContent,
   CardHeader,
-  Chip,
-  Grid2,
+  CardContent,
   LinearProgress,
   Pagination,
   Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
-  Typography } from "@mui/material";
+  Typography,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useTenant } from "../tenants/TenantContext";
 import { REWARD_PRODUCTS_PAGE_QUERY } from "./queries";
@@ -84,6 +88,8 @@ useEffect(() => {
     }
   }, [totalPages, page]);
 
+  const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "—");
+
   const handleOpen = (productId: string) => {
     navigate(`/reward-products/${productId}`);
   };
@@ -91,7 +97,7 @@ useEffect(() => {
   return (
     <Card>
       <CardHeader
-        title="Reward Products"
+        title="Reward Catalog"
         subheader={
           selectedTenantName
             ? `Viewing reward catalog for ${selectedTenantName}`
@@ -116,58 +122,55 @@ useEffect(() => {
           )}
           {error && <Alert severity="error">{error.message}</Alert>}
           {loading && <LinearProgress />}
-          <Grid2 container spacing={2}>
-            {rewardProducts.map((product) => {
-              const enabled = parseEnabled(product.attributes);
-              return (
-                <Grid2 key={product.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                  <Card variant="outlined" sx={{ height: "100%" }}>
-                    <CardActionArea onClick={() => handleOpen(product.id)} sx={{ height: "100%" }}>
-                      <CardContent sx={{ height: "100%" }}>
-                        <Stack spacing={1} sx={{ height: "100%" }}>
-                          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Typography variant="h6">{product.name}</Typography>
-                            <Chip
-                              label={enabled ? "Enabled" : "Disabled"}
-                              size="small"
-                              color={enabled ? "success" : "default"}
-                              variant={enabled ? "filled" : "outlined"}
-                            />
-                          </Box>
-                          <Typography variant="body2" color="text.secondary">
-                            Vendor: {product.rewardVendor}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            SKU: {product.sku}
-                          </Typography>
-                          {product.gtin && (
-                            <Typography variant="body2" color="text.secondary">
-                              GTIN: {product.gtin}
-                            </Typography>
-                          )}
-                          <Box sx={{ mt: "auto" }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                              {product.pointsCost.toLocaleString()} points
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Tap to edit details
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                </Grid2>
-              );
-            })}
-            {!loading && selectedTenantId && rewardProducts.length === 0 && (
-              <Grid2 size={12}>
-                <Alert severity="info">
-                  {debouncedSearch ? "No reward products match this search." : "No reward products available."}
-                </Alert>
-              </Grid2>
-            )}
-          </Grid2>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Vendor</TableCell>
+                  <TableCell>SKU</TableCell>
+                  <TableCell>GTIN</TableCell>
+                  <TableCell>Points</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Updated</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rewardProducts.map((product) => {
+                  const enabled = parseEnabled(product.attributes);
+                  return (
+                    <TableRow
+                      key={product.id}
+                      hover
+                      onClick={() => handleOpen(product.id)}
+                      sx={{ cursor: "pointer" }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {product.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{product.rewardVendor}</TableCell>
+                      <TableCell>{product.sku}</TableCell>
+                      <TableCell>{product.gtin ?? "—"}</TableCell>
+                      <TableCell>{product.pointsCost.toLocaleString()}</TableCell>
+                      <TableCell>{enabled ? "Enabled" : "Disabled"}</TableCell>
+                      <TableCell>{formatDate(product.updatedAt)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {!loading && selectedTenantId && rewardProducts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <Typography variant="body2" color="text.secondary">
+                        {debouncedSearch ? "No reward products match this search." : "No reward products available."}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
           {totalPages > 1 && (
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               <Pagination
