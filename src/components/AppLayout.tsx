@@ -39,6 +39,7 @@ import { TenantProvider, useTenant } from "../modules/tenants/TenantContext";
 
 const drawerWidth = 240;
 const logoUrl = new URL("../assets/eazle_logo_transparent.png", import.meta.url).href;
+const showUsersMenu = false;
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: <DashboardCustomizeIcon /> },
@@ -112,20 +113,22 @@ const AppLayoutContent: React.FC = () => {
                 </ListItem>
                 <Collapse in={customersOpen} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItem disablePadding>
-                      <ListItemButton
-                        component={RouterLink}
-                        to="/users"
-                        selected={location.pathname === "/users"}
-                        sx={{ pl: 4 }}
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        <ListItemIcon>
-                          <AccountCircleIcon />
-                        </ListItemIcon>
-                        <ListItemText primary="Users" />
-                      </ListItemButton>
-                    </ListItem>
+                    {showUsersMenu && (
+                      <ListItem disablePadding>
+                        <ListItemButton
+                          component={RouterLink}
+                          to="/users"
+                          selected={location.pathname === "/users"}
+                          sx={{ pl: 4 }}
+                          onClick={() => setMobileOpen(false)}
+                        >
+                          <ListItemIcon>
+                            <AccountCircleIcon />
+                          </ListItemIcon>
+                          <ListItemText primary="Users" />
+                        </ListItemButton>
+                      </ListItem>
+                    )}
                   </List>
                 </Collapse>
               </React.Fragment>
