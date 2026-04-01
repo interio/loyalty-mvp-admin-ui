@@ -114,7 +114,7 @@ const AppLayoutContent: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "background.default" }}>
+    <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "background.default", overflowX: "hidden" }}>
       <CssBaseline />
       <AppBar
         position="fixed"
@@ -228,7 +228,7 @@ const AppLayoutContent: React.FC = () => {
         </Drawer>
       </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8 }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: 3, mt: 8, overflowX: "hidden" }}>
         <Outlet />
       </Box>
     </Box>

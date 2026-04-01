@@ -1,9 +1,13 @@
 import React from "react";
 import { useQuery } from "@apollo/client";
 import { useNavigate } from "react-router-dom";
+import moment from "moment";
+import Timeline, { DateHeader, TimelineHeaders } from "react-calendar-timeline";
+import "react-calendar-timeline/lib/Timeline.css";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Divider,
@@ -77,10 +81,58 @@ type CampaignRule = {
   endDate?: string | null;
 };
 
+type CampaignStatus = "past" | "active" | "future";
+
+const dayMs = 24 * 60 * 60 * 1000;
+
+const parseCampaignDate = (value?: string | null): number | null => {
+  if (!value) return null;
+
+  const parsedIso = moment.parseZone(value, moment.ISO_8601, true);
+  if (parsedIso.isValid()) return parsedIso.valueOf();
+
+  const parsedFallback = moment(value, ["DD/MM/YYYY, HH:mm:ss", "DD/MM/YYYY HH:mm:ss", "YYYY-MM-DD HH:mm:ss"], true);
+  if (parsedFallback.isValid()) return parsedFallback.valueOf();
+
+  return null;
+};
+
+const getCampaignStatusStyle = (status: CampaignStatus): React.CSSProperties => {
+  if (status === "active") {
+    return {
+      background: "#008200",
+      border: "1px solid #205527",
+      color: "#FFFFFF",
+      borderRadius: 6,
+      fontWeight: 600,
+    };
+  }
+
+  if (status === "future") {
+    return {
+      background: "#E6F2ED",
+      border: "1px solid #008200",
+      color: "#1C1F1E",
+      borderRadius: 6,
+      fontWeight: 600,
+    };
+  }
+
+  return {
+    background: "#F1F2EF",
+    border: "1px solid #C3C3C3",
+    color: "#1C1F1E",
+    borderRadius: 6,
+    opacity: 0.85,
+    fontWeight: 500,
+  };
+};
+
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { selectedTenantId } = useTenant();
   const [range, setRange] = React.useState<OrdersRange>("24h");
+  const [timelineMonthStart, setTimelineMonthStart] = React.useState(() => moment().startOf("month"));
   const data = ordersData[range];
   const summary = ordersSummaryData[range];
   const maxOrders = Math.max(...data.map((item) => item.orders));
@@ -99,8 +151,9 @@ export const DashboardPage: React.FC = () => {
     const future: CampaignRule[] = [];
 
     for (const campaign of campaigns) {
-      const startTs = new Date(campaign.startDate).getTime();
-      const endTs = campaign.endDate ? new Date(campaign.endDate).getTime() : null;
+      const startTs = parseCampaignDate(campaign.startDate);
+      const endTs = parseCampaignDate(campaign.endDate);
+      if (startTs === null) continue;
 
       if (startTs > now) {
         future.push(campaign);
@@ -118,7 +171,95 @@ export const DashboardPage: React.FC = () => {
     return { pastCampaigns: past, currentCampaigns: current, futureCampaigns: future };
   }, [campaigns]);
 
-  const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString() : "No end date");
+  const { timelineGroups, timelineItems, timelineRuleByItemId, timelineKey } = React.useMemo(() => {
+    const now = Date.now();
+    const groups: { id: number; title: string }[] = [];
+    const items: {
+      id: number;
+      group: number;
+      title: string;
+      start_time: number;
+      end_time: number;
+      itemProps: { style: React.CSSProperties };
+    }[] = [];
+    const ruleByItemId = new Map<number, string>();
+
+    campaigns.forEach((campaign, index) => {
+      const rowId = index + 1;
+      const itemId = index + 1;
+      const startTs = parseCampaignDate(campaign.startDate);
+      if (startTs === null) return;
+
+      const parsedEndTs = parseCampaignDate(campaign.endDate);
+      const hasValidEnd = parsedEndTs !== null;
+
+      let status: CampaignStatus = "active";
+      if (startTs > now) {
+        status = "future";
+      } else if (hasValidEnd && parsedEndTs < now) {
+        status = "past";
+      }
+
+      let endTs = hasValidEnd ? parsedEndTs : startTs + 30 * dayMs;
+      if (endTs <= startTs) {
+        endTs = startTs + dayMs;
+      }
+      if (!hasValidEnd && status === "active") {
+        endTs = Math.max(endTs, now + 30 * dayMs);
+      }
+
+      groups.push({
+        id: rowId,
+        title: "",
+      });
+
+      items.push({
+        id: itemId,
+        group: rowId,
+        title: campaign.ruleName,
+        start_time: startTs,
+        end_time: endTs,
+        itemProps: {
+          style: getCampaignStatusStyle(status),
+        },
+      });
+      ruleByItemId.set(itemId, campaign.id);
+    });
+
+    if (items.length === 0) {
+      return {
+        timelineGroups: groups,
+        timelineItems: items,
+        timelineRuleByItemId: ruleByItemId,
+        timelineKey: "empty",
+      };
+    }
+
+    return {
+      timelineGroups: groups,
+      timelineItems: items,
+      timelineRuleByItemId: ruleByItemId,
+      timelineKey: items
+        .map((item) => `${item.id}:${item.start_time}:${item.end_time}:${item.group}`)
+        .join("|"),
+    };
+  }, [campaigns]);
+
+  const visibleTimeStart = React.useMemo(() => timelineMonthStart.clone().startOf("month").valueOf(), [timelineMonthStart]);
+  const visibleTimeEnd = React.useMemo(() => timelineMonthStart.clone().endOf("month").valueOf(), [timelineMonthStart]);
+  const monthRangeMs = visibleTimeEnd - visibleTimeStart;
+
+  const handleTimelineWheelCapture = (event: React.WheelEvent<HTMLDivElement>) => {
+    // Keep timeline navigation strictly on < and > controls.
+    if (Math.abs(event.deltaX) > 0 || event.shiftKey || event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+    }
+  };
+
+  const formatDate = (value?: string | null) => {
+    const parsed = parseCampaignDate(value);
+    return parsed === null ? "No end date" : new Date(parsed).toLocaleDateString();
+  };
 
   const renderCampaignGroup = (
     title: string,
@@ -178,7 +319,7 @@ export const DashboardPage: React.FC = () => {
   );
 
   return (
-    <Box>
+    <Box sx={{ width: "100%", overflowX: "hidden" }}>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           Dashboard
@@ -348,6 +489,91 @@ export const DashboardPage: React.FC = () => {
                   </Grid2>
                   <Grid2 size={{ xs: 12, lg: 4 }}>
                     {renderCampaignGroup("Future Campaigns", futureCampaigns, { showStartDate: true, showEndDate: false })}
+                  </Grid2>
+                  <Grid2 size={12} sx={{ minWidth: 0 }}>
+                    <Box
+                      sx={{
+                        mt: 1,
+                        p: 2,
+                        borderRadius: 2,
+                        border: "1px solid",
+                        borderColor: "#E3E5E2",
+                        bgcolor: "#FFFFFF",
+                        "& .rct-header-root": {
+                          bgcolor: "#F5F6F4",
+                          borderBottom: "1px solid #E3E5E2",
+                        },
+                        "& .rct-sidebar": {
+                          borderRight: "1px solid #E3E5E2",
+                        },
+                        "& .rct-sidebar-row, & .rct-horizontal-lines .rct-hl-even, & .rct-horizontal-lines .rct-hl-odd": {
+                          borderBottom: "1px solid #E3E5E2",
+                          bgcolor: "#FFFFFF",
+                        },
+                        "& .rct-vertical-lines .rct-vl": {
+                          borderLeft: "1px solid #E3E5E2",
+                        },
+                        "& .rct-dateHeader": {
+                          color: "#1C1F1E",
+                        },
+                      }}
+                    >
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+                        Campaign Timeline
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Past, active, and future campaigns on a single timeline.
+                      </Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+                        <Button size="small" variant="outlined" onClick={() => setTimelineMonthStart((prev) => prev.clone().subtract(1, "month"))}>
+                          {"<"}
+                        </Button>
+                        <Typography variant="subtitle2" sx={{ color: "#1C1F1E", fontWeight: 700 }}>
+                          {timelineMonthStart.format("MMMM YYYY")}
+                        </Typography>
+                        <Button size="small" variant="outlined" onClick={() => setTimelineMonthStart((prev) => prev.clone().add(1, "month"))}>
+                          {">"}
+                        </Button>
+                      </Box>
+                      {timelineItems.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No campaigns to visualize.
+                        </Typography>
+                      ) : (
+                        <Box onWheelCapture={handleTimelineWheelCapture}>
+                          <Timeline
+                            key={`${timelineMonthStart.format("YYYY-MM")}-${timelineKey}`}
+                            groups={timelineGroups}
+                            items={timelineItems}
+                            visibleTimeStart={visibleTimeStart}
+                            visibleTimeEnd={visibleTimeEnd}
+                            minZoom={monthRangeMs}
+                            maxZoom={monthRangeMs}
+                            buffer={1}
+                            sidebarWidth={0}
+                            lineHeight={52}
+                            itemHeightRatio={0.72}
+                            canMove={false}
+                            canResize={false}
+                            canChangeGroup={false}
+                            stackItems
+                            onItemSelect={(itemId) => {
+                              const ruleId = timelineRuleByItemId.get(Number(itemId));
+                              if (!ruleId) return;
+                              navigate(`/rules/${ruleId}`);
+                            }}
+                            onTimeChange={(_, __, updateScrollCanvas) => {
+                              updateScrollCanvas(visibleTimeStart, visibleTimeEnd);
+                            }}
+                          >
+                            <TimelineHeaders>
+                              <DateHeader unit="month" />
+                              <DateHeader unit="day" labelFormat="D" />
+                            </TimelineHeaders>
+                          </Timeline>
+                        </Box>
+                      )}
+                    </Box>
                   </Grid2>
                 </Grid2>
               )}
