@@ -201,12 +201,13 @@ export const DashboardPage: React.FC = () => {
         status = "past";
       }
 
-      let endTs = hasValidEnd ? parsedEndTs : startTs + 30 * dayMs;
+      // Open-ended campaigns stay visible through the end of the relevant year.
+      // Using a finite boundary is safer than an "infinite" end timestamp for timeline rendering.
+      let endTs = hasValidEnd
+        ? parsedEndTs
+        : moment.max(moment(startTs), moment(now)).endOf("year").valueOf();
       if (endTs <= startTs) {
         endTs = startTs + dayMs;
-      }
-      if (!hasValidEnd && status === "active") {
-        endTs = Math.max(endTs, now + 30 * dayMs);
       }
 
       normalizedCampaigns.push({
