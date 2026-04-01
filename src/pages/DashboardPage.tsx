@@ -171,21 +171,22 @@ export const DashboardPage: React.FC = () => {
     return { pastCampaigns: past, currentCampaigns: current, futureCampaigns: future };
   }, [campaigns]);
 
-  const { timelineGroups, timelineItems, timelineRuleByItemId, timelineKey } = React.useMemo(() => {
+  const visibleTimeStart = React.useMemo(() => timelineMonthStart.clone().startOf("month").valueOf(), [timelineMonthStart]);
+  const visibleTimeEnd = React.useMemo(() => timelineMonthStart.clone().endOf("month").valueOf(), [timelineMonthStart]);
+  const monthRangeMs = visibleTimeEnd - visibleTimeStart;
+
+  const timelineCampaigns = React.useMemo(() => {
     const now = Date.now();
-    const groups: { id: number; title: string }[] = [];
-    const items: {
-      id: number;
-      group: number;
-      title: string;
-      start_time: number;
-      end_time: number;
-      itemProps: { style: React.CSSProperties };
+    const normalizedCampaigns: {
+      itemId: number;
+      ruleId: string;
+      ruleName: string;
+      startTs: number;
+      endTs: number;
+      status: CampaignStatus;
     }[] = [];
-    const ruleByItemId = new Map<number, string>();
 
     campaigns.forEach((campaign, index) => {
-      const rowId = index + 1;
       const itemId = index + 1;
       const startTs = parseCampaignDate(campaign.startDate);
       if (startTs === null) return;
@@ -208,25 +209,55 @@ export const DashboardPage: React.FC = () => {
         endTs = Math.max(endTs, now + 30 * dayMs);
       }
 
-      groups.push({
-        id: rowId,
-        title: "",
+      normalizedCampaigns.push({
+        itemId,
+        ruleId: campaign.id,
+        ruleName: campaign.ruleName,
+        startTs,
+        endTs,
+        status,
       });
-
-      items.push({
-        id: itemId,
-        group: rowId,
-        title: campaign.ruleName,
-        start_time: startTs,
-        end_time: endTs,
-        itemProps: {
-          style: getCampaignStatusStyle(status),
-        },
-      });
-      ruleByItemId.set(itemId, campaign.id);
     });
 
-    if (items.length === 0) {
+    return normalizedCampaigns.sort((left, right) => {
+      if (left.startTs !== right.startTs) {
+        return left.startTs - right.startTs;
+      }
+
+      return left.ruleName.localeCompare(right.ruleName);
+    });
+  }, [campaigns]);
+
+  const { timelineGroups, timelineItems, timelineRuleByItemId, timelineKey } = React.useMemo(() => {
+    const visibleCampaigns = timelineCampaigns.filter(
+      (campaign) => campaign.startTs <= visibleTimeEnd && campaign.endTs >= visibleTimeStart,
+    );
+    const groups: { id: number; title: string }[] = [];
+    const items: {
+      id: number;
+      group: number;
+      title: string;
+      start_time: number;
+      end_time: number;
+      itemProps: { style: React.CSSProperties };
+    }[] = [];
+    const ruleByItemId = new Map<number, string>();
+
+    visibleCampaigns.forEach((campaign, index) => {
+      const rowId = index + 1;
+      groups.push({ id: rowId, title: "" });
+      items.push({
+        id: campaign.itemId,
+        group: rowId,
+        title: campaign.ruleName,
+        start_time: campaign.startTs,
+        end_time: campaign.endTs,
+        itemProps: { style: getCampaignStatusStyle(campaign.status) },
+      });
+      ruleByItemId.set(campaign.itemId, campaign.ruleId);
+    });
+
+    if (visibleCampaigns.length === 0) {
       return {
         timelineGroups: groups,
         timelineItems: items,
@@ -243,11 +274,7 @@ export const DashboardPage: React.FC = () => {
         .map((item) => `${item.id}:${item.start_time}:${item.end_time}:${item.group}`)
         .join("|"),
     };
-  }, [campaigns]);
-
-  const visibleTimeStart = React.useMemo(() => timelineMonthStart.clone().startOf("month").valueOf(), [timelineMonthStart]);
-  const visibleTimeEnd = React.useMemo(() => timelineMonthStart.clone().endOf("month").valueOf(), [timelineMonthStart]);
-  const monthRangeMs = visibleTimeEnd - visibleTimeStart;
+  }, [timelineCampaigns, visibleTimeEnd, visibleTimeStart]);
 
   const handleTimelineWheelCapture = (event: React.WheelEvent<HTMLDivElement>) => {
     // Keep timeline navigation strictly on < and > controls.
