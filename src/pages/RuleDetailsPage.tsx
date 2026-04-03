@@ -31,7 +31,7 @@ type PointsRule = {
   tenantId: string;
   name: string;
   ruleType: string;
-  ruleVersion: number;
+  rewardPoints: number;
   active: boolean;
   priority: number;
   effectiveFrom?: string;
@@ -261,13 +261,6 @@ export const RuleDetailsPage: React.FC = () => {
   };
 
   const tree = useMemo(() => buildTreeFromFlat(flatTree), [flatTree]);
-  const pointsToGrant = useMemo(() => {
-    if (!flatTree) return "—";
-    const reward = flatTree.conditions.find(
-      (condition) => condition.entityCode === "rule" && condition.attributeCode === "rewardPoints",
-    );
-    return reward ? formatValueJson(reward.valueJson) : "—";
-  }, [flatTree]);
 
   const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
@@ -276,6 +269,12 @@ export const RuleDetailsPage: React.FC = () => {
   const getConditionValue = (target: PointsRule, key: string) => {
     const entry = target.conditions?.find((cond) => cond.key === key);
     return entry?.value ?? "";
+  };
+
+  const getRewardPoints = (target: PointsRule) => {
+    if (target.rewardPoints > 0) return target.rewardPoints;
+    const legacy = Number(getConditionValue(target, "rewardPoints"));
+    return Number.isFinite(legacy) && legacy > 0 ? legacy : "—";
   };
 
   const renderConditionTree = (group: RuleConditionTreeGroup, depth = 0) => (
@@ -427,7 +426,7 @@ export const RuleDetailsPage: React.FC = () => {
                 Rule type: {rule.ruleType}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                Version: {rule.ruleVersion}
+                Points to grant: {getRewardPoints(rule)}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 Priority: {rule.priority}
@@ -474,9 +473,6 @@ export const RuleDetailsPage: React.FC = () => {
           <DetailSection title="Conditions" sx={{ mt: 2 }}>
             {rule.ruleType === "complex_rule" ? (
               <>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Points to grant: {pointsToGrant}
-                </Typography>
                 {flatLoading && <LinearProgress />}
                 {!flatLoading && !tree && <Alert severity="info">No condition tree found for this rule.</Alert>}
                 {!flatLoading && tree && renderConditionTree(tree)}
@@ -504,7 +500,7 @@ export const RuleDetailsPage: React.FC = () => {
                     Reward points (Y)
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {getConditionValue(rule, "rewardPoints")}
+                    {getRewardPoints(rule)}
                   </Typography>
                 </Box>
               </Stack>
@@ -523,7 +519,7 @@ export const RuleDetailsPage: React.FC = () => {
                     Get Y points
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {getConditionValue(rule, "rewardPoints")}
+                    {getRewardPoints(rule)}
                   </Typography>
                 </Box>
               </Stack>

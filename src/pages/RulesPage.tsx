@@ -50,7 +50,7 @@ type PointsRule = {
   tenantId: string;
   name: string;
   ruleType: string;
-  ruleVersion: number;
+  rewardPoints: number;
   active: boolean;
   priority: number;
   effectiveFrom?: string;
@@ -309,8 +309,8 @@ export const RulesPage: React.FC = () => {
     try {
       const conditions =
         ruleType === "sku_quantity"
-          ? { sku: sku.trim(), quantityStep: quantityStep || 0, rewardPoints: rewardPoints || 0 }
-          : { spendStep: spendStep || 0, rewardPoints: rewardPoints || 0 };
+          ? { sku: sku.trim(), quantityStep: quantityStep || 0 }
+          : { spendStep: spendStep || 0 };
 
       const payload = {
         rules: [
@@ -318,6 +318,7 @@ export const RulesPage: React.FC = () => {
             tenantId: selectedTenantId,
             name: ruleName.trim(),
             ruleType,
+            rewardPoints: rewardPoints || 0,
             priority,
             active: ruleActive,
             conditions,
@@ -1135,7 +1136,7 @@ export const RulesPage: React.FC = () => {
               <TableRow>
                 <TableCell>Name</TableCell>
                 <TableCell>Type</TableCell>
-                <TableCell>Version</TableCell>
+                <TableCell>Reward Points</TableCell>
                 <TableCell>Active</TableCell>
                 <TableCell>Priority</TableCell>
                 <TableCell>Effective From</TableCell>
@@ -1156,7 +1157,7 @@ export const RulesPage: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>{rule.ruleType}</TableCell>
-                  <TableCell>{rule.ruleVersion}</TableCell>
+                  <TableCell>{rule.rewardPoints}</TableCell>
                   <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
                   <TableCell>{rule.priority}</TableCell>
                   <TableCell>{formatDate(rule.effectiveFrom)}</TableCell>

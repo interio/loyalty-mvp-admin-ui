@@ -7,7 +7,7 @@ export const RULES_BY_TENANT_QUERY = gql`
       tenantId
       name
       ruleType
-      ruleVersion
+      rewardPoints
       active
       priority
       effectiveFrom
@@ -30,7 +30,7 @@ export const RULES_BY_TENANT_PAGE_QUERY = gql`
         tenantId
         name
         ruleType
-        ruleVersion
+        rewardPoints
         active
         priority
         effectiveFrom
