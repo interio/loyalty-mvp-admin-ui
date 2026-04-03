@@ -25,7 +25,6 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BusinessIcon from "@mui/icons-material/Business";
 import RedeemIcon from "@mui/icons-material/Redeem";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
-import StarIcon from "@mui/icons-material/Star";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
@@ -79,7 +78,6 @@ const AppLayoutContent: React.FC = () => {
         <Box component="img" src={logoUrl} alt="Eazle logo" sx={{ width: 64, height: "auto", display: "block", mr: 1.25 }} />
         <Typography variant="h6" noWrap component="div" sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           Loyalty
-          <StarIcon sx={{ color: "#FF2B00", fontSize: 15 }} />
         </Typography>
       </Toolbar>
       <Divider />
@@ -136,7 +134,6 @@ const AppLayoutContent: React.FC = () => {
           <Box component="img" src={logoUrl} alt="Eazle logo" sx={{ width: 64, height: "auto", display: "block", mr: 1.25 }} />
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, display: "flex", alignItems: "center", gap: 0.5 }}>
             Loyalty
-            <StarIcon sx={{ color: "#FF2B00", fontSize: 16 }} />
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <FormControl
