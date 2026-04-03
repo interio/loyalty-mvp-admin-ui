@@ -12,6 +12,7 @@ export const RULES_BY_TENANT_QUERY = gql`
       priority
       effectiveFrom
       effectiveTo
+      createdBy
       createdAt
       updatedAt
       conditions {
@@ -35,6 +36,7 @@ export const RULES_BY_TENANT_PAGE_QUERY = gql`
         priority
         effectiveFrom
         effectiveTo
+        createdBy
         createdAt
         updatedAt
         conditions {

@@ -11,7 +11,6 @@ import {
   Chip,
   Divider,
   FormControl,
-  FormControlLabel,
   FormHelperText,
   InputLabel,
   LinearProgress,
@@ -22,7 +21,6 @@ import {
   Step,
   StepLabel,
   Stepper,
-  Switch,
   Table,
   TableBody,
   TableCell,
@@ -33,6 +31,7 @@ import {
   Typography,
 } from "@mui/material";
 import { apiBaseUrl } from "../config";
+import { useAuth } from "../auth/AuthContext";
 import { useTenant } from "../modules/tenants/TenantContext";
 import {
   RULE_ATTRIBUTE_OPERATORS_QUERY,
@@ -51,8 +50,8 @@ type PointsRule = {
   name: string;
   ruleType: string;
   rewardPoints: number;
+  createdBy?: string | null;
   active: boolean;
-  priority: number;
   effectiveFrom?: string;
   effectiveTo?: string | null;
   createdAt?: string;
@@ -141,13 +140,11 @@ const createGroup = (operator: "AND" | "OR" = "AND"): ConditionGroup => ({
 export const RulesPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const apolloClient = useApolloClient();
   const [ruleName, setRuleName] = useState("");
   const [ruleType, setRuleType] = useState<RuleType | "">("");
-  const [ruleActive, setRuleActive] = useState(true);
-  const [priority, setPriority] = useState<number>(1);
-  const [priorityTouched, setPriorityTouched] = useState(false);
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveTo, setEffectiveTo] = useState("");
   const [sku, setSku] = useState("");
@@ -195,6 +192,8 @@ export const RulesPage: React.FC = () => {
   const isComplexRule = ruleType === "complex_rule";
   const complexDetailsValid = ruleName.trim().length > 0 && pointsToGrant > 0;
   const disabled = !selectedTenantId || !ruleName.trim() || !ruleType || loading || (isComplexRule && !complexDetailsValid);
+  // Temporary: until real backend auth exists, we pass the email from local dummy auth.
+  const createdBy = user?.email?.trim().toLowerCase() ?? "unknown-admin@example.local";
 
   const refreshRules = (location.state as { refreshRules?: boolean } | null)?.refreshRules === true;
   useEffect(() => {
@@ -212,9 +211,6 @@ export const RulesPage: React.FC = () => {
   const resetForm = () => {
     setRuleName("");
     setRuleType("");
-    setRuleActive(true);
-    setPriority(1);
-    setPriorityTouched(false);
     setEffectiveFrom(toLocalDateTimeInput(new Date()));
     setEffectiveTo("");
     setSku("");
@@ -242,12 +238,6 @@ export const RulesPage: React.FC = () => {
   }, [showForm, effectiveFrom]);
 
   useEffect(() => {
-    if (!priorityTouched) {
-      setPriority(ruleType === "sku_quantity" ? 2 : 1);
-    }
-  }, [ruleType, priorityTouched]);
-
-  useEffect(() => {
     if ((pageInfo?.totalPages ?? 0) > 0 && page > (pageInfo?.totalPages ?? 0)) {
       setPage(pageInfo?.totalPages ?? 1);
     }
@@ -273,8 +263,8 @@ export const RulesPage: React.FC = () => {
           tenantId: selectedTenantId,
           name: ruleName.trim(),
           ruleType: "complex_rule",
-          priority,
-          active: ruleActive,
+          createdBy,
+          active: false,
           pointsToGrant,
           effectiveFrom: toIsoFromInput(effectiveFrom),
           effectiveTo: toIsoFromInput(effectiveTo),
@@ -318,9 +308,9 @@ export const RulesPage: React.FC = () => {
             tenantId: selectedTenantId,
             name: ruleName.trim(),
             ruleType,
+            createdBy,
             rewardPoints: rewardPoints || 0,
-            priority,
-            active: ruleActive,
+            active: false,
             conditions,
             effectiveFrom: toIsoFromInput(effectiveFrom),
             effectiveTo: toIsoFromInput(effectiveTo),
@@ -973,24 +963,6 @@ export const RulesPage: React.FC = () => {
             {!isComplexRule && (
               <>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <FormControlLabel
-                    control={<Switch checked={ruleActive} onChange={(e) => setRuleActive(e.target.checked)} />}
-                    label={ruleActive ? "Active" : "Inactive"}
-                  />
-                  <TextField
-                    label="Priority"
-                    type="number"
-                    value={priority}
-                    onChange={(e) => {
-                      setPriorityTouched(true);
-                      setPriority(Number(e.target.value));
-                    }}
-                    fullWidth
-                    inputProps={{ min: 0 }}
-                    helperText="Higher priority rules run first."
-                  />
-                </Stack>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <TextField
                     label="Effective from"
                     type="datetime-local"
@@ -1024,24 +996,6 @@ export const RulesPage: React.FC = () => {
 
                 {complexStep === 0 && (
                   <Stack spacing={2}>
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                      <FormControlLabel
-                        control={<Switch checked={ruleActive} onChange={(e) => setRuleActive(e.target.checked)} />}
-                        label={ruleActive ? "Active" : "Inactive"}
-                      />
-                      <TextField
-                        label="Priority"
-                        type="number"
-                        value={priority}
-                        onChange={(e) => {
-                          setPriorityTouched(true);
-                          setPriority(Number(e.target.value));
-                        }}
-                        fullWidth
-                        inputProps={{ min: 0 }}
-                        helperText="Higher priority rules run first."
-                      />
-                    </Stack>
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                       <TextField
                         label="Effective from"
@@ -1138,7 +1092,6 @@ export const RulesPage: React.FC = () => {
                 <TableCell>Type</TableCell>
                 <TableCell>Reward Points</TableCell>
                 <TableCell>Active</TableCell>
-                <TableCell>Priority</TableCell>
                 <TableCell>Effective From</TableCell>
                 <TableCell>Effective To</TableCell>
               </TableRow>
@@ -1159,14 +1112,13 @@ export const RulesPage: React.FC = () => {
                   <TableCell>{rule.ruleType}</TableCell>
                   <TableCell>{rule.rewardPoints}</TableCell>
                   <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
-                  <TableCell>{rule.priority}</TableCell>
                   <TableCell>{formatDate(rule.effectiveFrom)}</TableCell>
                   <TableCell>{formatDate(rule.effectiveTo)}</TableCell>
                 </TableRow>
               ))}
               {selectedTenantId && !rulesLoading && rules.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={6}>
                     <Typography variant="body2" color="text.secondary">
                       No rules found for this tenant.
                     </Typography>

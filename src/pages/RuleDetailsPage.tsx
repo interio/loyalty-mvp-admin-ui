@@ -32,8 +32,8 @@ type PointsRule = {
   name: string;
   ruleType: string;
   rewardPoints: number;
+  createdBy?: string | null;
   active: boolean;
-  priority: number;
   effectiveFrom?: string;
   effectiveTo?: string | null;
   createdAt?: string;
@@ -429,7 +429,7 @@ export const RuleDetailsPage: React.FC = () => {
                 Points to grant: {getRewardPoints(rule)}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                Priority: {rule.priority}
+                Created by: {rule.createdBy?.trim() ? rule.createdBy : "—"}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 Effective from: {formatDate(rule.effectiveFrom)}
