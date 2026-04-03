@@ -6,6 +6,7 @@ export const INVOICES_BY_TENANT_QUERY = gql`
       id
       tenantId
       invoiceId
+      orderId
       customerExternalId
       currency
       actorEmail
@@ -34,6 +35,7 @@ export const INVOICES_BY_TENANT_PAGE_QUERY = gql`
         id
         tenantId
         invoiceId
+        orderId
         customerExternalId
         currency
         actorEmail
@@ -68,6 +70,7 @@ export const INVOICE_BY_ID_QUERY = gql`
       id
       tenantId
       invoiceId
+      orderId
       customerExternalId
       currency
       actorEmail

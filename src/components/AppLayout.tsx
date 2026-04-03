@@ -45,7 +45,7 @@ const navItems = [
   { label: "Reward Orders", path: "/reward-orders", icon: <RedeemIcon /> },
   { label: "Rules", path: "/rules", icon: <RuleIcon /> },
   { label: "Entities", path: "/entities", icon: <AccountTreeIcon /> },
-  { label: "Invoices", path: "/invoices", icon: <ReceiptLongIcon /> },
+  { label: "Orders", path: "/invoices", icon: <ReceiptLongIcon /> },
 ];
 
 export const AppLayout: React.FC = () => (

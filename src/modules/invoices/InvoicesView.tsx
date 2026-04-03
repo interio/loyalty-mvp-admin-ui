@@ -29,6 +29,7 @@ type Invoice = {
   id: string;
   tenantId: string;
   invoiceId: string;
+  orderId?: string | null;
   customerExternalId?: string | null;
   occurredAt?: string | null;
   receivedAt: string;
@@ -136,24 +137,24 @@ export const InvoicesView: React.FC = () => {
 
   const totalLabel = debouncedSearch
     ? `Matches: ${pageInfo?.totalCount ?? 0}`
-    : `Total invoices: ${pageInfo?.totalCount ?? 0}`;
+    : `Total orders: ${pageInfo?.totalCount ?? 0}`;
 
   const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
 
   return (
     <Card>
       <CardHeader
-        title="Invoices"
+        title="Orders"
         subheader={
           selectedTenantName
-            ? `Viewing invoices for ${selectedTenantName}`
-            : "Select a tenant from the header to load invoices."
+            ? `Viewing orders for ${selectedTenantName}`
+            : "Select a tenant from the header to load orders."
         }
       />
       <CardContent>
         <Stack spacing={2}>
           <TextField
-            placeholder="Search by invoice ID, customer external ID, status, or error"
+            placeholder="Search by order ID, invoice ID, customer external ID, status, or error"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             disabled={!selectedTenantId}
@@ -172,7 +173,7 @@ export const InvoicesView: React.FC = () => {
           )}
           {!selectedTenantId && !tenantsLoading && (
             <Typography variant="body2" color="text.secondary">
-              Choose a tenant to see its invoices.
+              Choose a tenant to see its orders.
             </Typography>
           )}
           {error && <Alert severity="error">{error.message}</Alert>}
@@ -181,14 +182,15 @@ export const InvoicesView: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
+                  <TableCell>Order ID</TableCell>
                   <TableCell>Invoice ID</TableCell>
                   <TableCell>Customer External ID</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Occurred</TableCell>
-                  <TableCell>Received</TableCell>
-                  <TableCell>Attempts</TableCell>
                   <TableCell>Total Qty</TableCell>
                   <TableCell>Total Net</TableCell>
+                  <TableCell>Received</TableCell>
+                  <TableCell>Occurred</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Attempts</TableCell>
                   <TableCell>Error</TableCell>
                 </TableRow>
               </TableHead>
@@ -209,14 +211,15 @@ export const InvoicesView: React.FC = () => {
                       sx={{ cursor: "pointer" }}
                       onClick={() => navigate(`/invoices/${invoice.id}`)}
                     >
+                      <TableCell>{invoice.orderId ?? "—"}</TableCell>
                       <TableCell>{invoice.invoiceId}</TableCell>
                       <TableCell>{invoice.customerExternalId ?? "—"}</TableCell>
-                      <TableCell>{invoice.status}</TableCell>
-                      <TableCell>{formatDateTime(invoice.occurredAt)}</TableCell>
-                      <TableCell>{formatDateTime(invoice.receivedAt)}</TableCell>
-                      <TableCell>{invoice.attemptCount}</TableCell>
                       <TableCell>{totals.quantity}</TableCell>
                       <TableCell>{totals.netAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                      <TableCell>{formatDateTime(invoice.receivedAt)}</TableCell>
+                      <TableCell>{formatDateTime(invoice.occurredAt)}</TableCell>
+                      <TableCell>{invoice.status}</TableCell>
+                      <TableCell>{invoice.attemptCount}</TableCell>
                       <TableCell>
                         <Typography variant="body2" noWrap title={invoice.error ?? ""}>
                           {invoice.error ?? "—"}
@@ -227,9 +230,9 @@ export const InvoicesView: React.FC = () => {
                 })}
                 {selectedTenantId && !loading && invoices.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={10}>
                       <Typography variant="body2" color="text.secondary">
-                        {debouncedSearch ? "No invoices match this search." : "No invoices found for this tenant."}
+                        {debouncedSearch ? "No orders match this search." : "No orders found for this tenant."}
                       </Typography>
                     </TableCell>
                   </TableRow>

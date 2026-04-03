@@ -25,6 +25,7 @@ type Invoice = {
   id: string;
   tenantId: string;
   invoiceId: string;
+  orderId?: string | null;
   customerExternalId?: string | null;
   occurredAt?: string | null;
   receivedAt: string;
@@ -85,22 +86,22 @@ export const InvoiceDetailsPage: React.FC = () => {
   return (
     <Card>
       <CardHeader
-        title="Invoice details"
+        title="Order details"
         subheader={
           selectedTenantName
-            ? `Viewing invoice for ${selectedTenantName}`
-            : "Select a tenant from the header to load invoice details."
+            ? `Viewing order for ${selectedTenantName}`
+            : "Select a tenant from the header to load order details."
         }
       />
       <CardContent>
         <Stack spacing={2}>
           <Box>
             <Button variant="outlined" onClick={() => navigate("/invoices", { state: { refreshInvoices: true } })}>
-              Back to invoices
+              Back to orders
             </Button>
           </Box>
           {!selectedTenantId && !tenantsLoading && (
-            <Alert severity="info">Select a tenant to view invoices.</Alert>
+            <Alert severity="info">Select a tenant to view orders.</Alert>
           )}
           {error && <Alert severity="error">{error.message}</Alert>}
           {loading && <LinearProgress />}
@@ -123,6 +124,14 @@ export const InvoiceDetailsPage: React.FC = () => {
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
                       {invoice.tenantId}
+                    </Typography>
+                  </Grid2>
+                  <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                      Order ID
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {invoice.orderId ?? "—"}
                     </Typography>
                   </Grid2>
                   <Grid2 size={{ xs: 12, sm: 6, md: 4 }}>
