@@ -11,6 +11,29 @@ React admin panel for the loyalty platform. Place it alongside `loyalty-mvp-back
 
 The infra repo contains Docker Compose to run the UI alongside the backend and Postgres.
 
+## Container-first commands (recommended)
+From this repo root (`loyalty-mvp-admin-ui`):
+```
+# Dev server against backend service in infra Docker network
+docker run --rm -it \
+  --network=loyalty-mvp-infra_loyalty \
+  -e VITE_API_URL=http://backend:8080 \
+  -v "$PWD":/src \
+  -w /src \
+  -p 3000:3000 \
+  node:20-alpine \
+  sh -lc "npm install && npm run dev -- --host --port 3000"
+
+# Production build
+docker run --rm \
+  -v "$PWD":/src \
+  -w /src \
+  node:20-alpine \
+  sh -lc "npm install && npm run build"
+```
+If your backend runs on host `localhost:5137` (outside Docker), use `host.docker.internal` from the container:
+`VITE_API_URL=http://host.docker.internal:5137 VITE_GRAPHQL_URL=http://host.docker.internal:5137/graphql`.
+
 ## Stack
 - React + TypeScript + Vite + React Router.
 - MUI with Heineken-inspired palette.
