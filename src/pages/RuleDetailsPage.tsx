@@ -272,6 +272,36 @@ export const RuleDetailsPage: React.FC = () => {
     return entry?.value ?? "";
   };
 
+  const getConditionValues = (target: PointsRule, key: string) => {
+    const raw = getConditionValue(target, key);
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((value) => String(value).trim())
+          .filter((value) => value.length > 0);
+      }
+
+      if (typeof parsed === "string") {
+        const trimmed = parsed.trim();
+        return trimmed ? [trimmed] : [];
+      }
+    } catch {
+      // Fall back to treating the raw condition as a scalar string.
+    }
+
+    const trimmed = raw.trim();
+    return trimmed ? [trimmed] : [];
+  };
+
+  const getSkuValues = (target: PointsRule) => {
+    const values = getConditionValues(target, "skus");
+    if (values.length > 0) return values;
+    return getConditionValues(target, "sku");
+  };
+
   const getRewardPoints = (target: PointsRule) => {
     if (target.rewardPoints > 0) return target.rewardPoints;
     const legacy = Number(getConditionValue(target, "rewardPoints"));
@@ -485,10 +515,10 @@ export const RuleDetailsPage: React.FC = () => {
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <Box>
                   <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                    Product SKU
+                    Product SKUs
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {getConditionValue(rule, "sku")}
+                    {getSkuValues(rule).join(", ") || "—"}
                   </Typography>
                 </Box>
                 <Box>

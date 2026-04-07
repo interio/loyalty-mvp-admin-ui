@@ -133,6 +133,23 @@ const createGroup = (operator: "AND" | "OR" = "AND"): ConditionGroup => ({
   operator,
   children: [createCondition()],
 });
+const sanitizeSkuValues = (values: string[]) => {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  values.forEach((raw) => {
+    raw
+      .split(",")
+      .map((part) => part.trim())
+      .filter((part) => part.length > 0)
+      .forEach((value) => {
+        const key = value.toUpperCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        normalized.push(value);
+      });
+  });
+  return normalized;
+};
 
 export const RulesPage: React.FC = () => {
   const location = useLocation();
@@ -146,7 +163,7 @@ export const RulesPage: React.FC = () => {
   const [ruleType, setRuleType] = useState<RuleType | "">("");
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveTo, setEffectiveTo] = useState("");
-  const [sku, setSku] = useState("");
+  const [skus, setSkus] = useState<string[]>([]);
   const [quantityStep, setQuantityStep] = useState<number>(0);
   const [rewardPoints, setRewardPoints] = useState<number>(0);
   const [spendStep, setSpendStep] = useState<number>(0);
@@ -186,8 +203,22 @@ export const RulesPage: React.FC = () => {
   }, [ruleEntities]);
 
   const isComplexRule = ruleType === "complex_rule";
+  const isSkuQuantityRule = ruleType === "sku_quantity";
+  const isSpendRule = ruleType === "spend";
+  const normalizedSkus = useMemo(() => sanitizeSkuValues(skus), [skus]);
   const complexDetailsValid = ruleName.trim().length > 0 && pointsToGrant > 0;
-  const disabled = !selectedTenantId || !ruleName.trim() || !ruleType || loading || (isComplexRule && !complexDetailsValid);
+  const simpleRuleValid = isSkuQuantityRule
+    ? normalizedSkus.length > 0 && quantityStep > 0 && rewardPoints > 0
+    : isSpendRule
+      ? spendStep > 0 && rewardPoints > 0
+      : true;
+  const disabled =
+    !selectedTenantId ||
+    !ruleName.trim() ||
+    !ruleType ||
+    loading ||
+    (isComplexRule && !complexDetailsValid) ||
+    (!isComplexRule && !simpleRuleValid);
   // Temporary: until real backend auth exists, we pass the email from local dummy auth.
   const createdBy = user?.email?.trim().toLowerCase() ?? "unknown-admin@example.local";
 
@@ -210,7 +241,7 @@ export const RulesPage: React.FC = () => {
     setRuleType("");
     setEffectiveFrom(toLocalDateTimeInput(new Date()));
     setEffectiveTo("");
-    setSku("");
+    setSkus([]);
     setQuantityStep(0);
     setRewardPoints(0);
     setSpendStep(0);
@@ -287,7 +318,7 @@ export const RulesPage: React.FC = () => {
     try {
       const conditions =
         ruleType === "sku_quantity"
-          ? { sku: sku.trim(), quantityStep: quantityStep || 0 }
+          ? { skus: normalizedSkus, quantityStep: quantityStep || 0 }
           : { spendStep: spendStep || 0 };
 
       const payload = {
@@ -331,13 +362,21 @@ export const RulesPage: React.FC = () => {
     if (ruleType === "sku_quantity") {
       return (
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
-            label="Product SKU"
-            value={sku}
-            onChange={(e) => setSku(e.target.value)}
+          <Autocomplete
+            multiple
+            freeSolo
+            options={[] as string[]}
+            value={skus}
+            onChange={(_, newValue) => setSkus(sanitizeSkuValues((newValue as string[]).map((value) => String(value))))}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Product SKUs"
+                required
+                helperText="Add one or more SKUs. Points are calculated per SKU separately. You can enter or paste comma-separated SKUs."
+              />
+            )}
             fullWidth
-            required
-            helperText="Choose an SKU from products."
           />
           <TextField
             label="Quantity step (X)"
@@ -383,7 +422,7 @@ export const RulesPage: React.FC = () => {
     }
 
     return null;
-  }, [ruleType, sku, quantityStep, rewardPoints, spendStep]);
+  }, [ruleType, skus, quantityStep, rewardPoints, spendStep]);
 
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
   const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
