@@ -50,6 +50,7 @@ const App: React.FC = () => {
                   <Route path="/reward-orders" element={<RewardOrdersPage />} />
                   <Route path="/reward-orders/:id" element={<RewardOrderDetailsPage />} />
                   <Route path="/rules" element={<RulesPage />} />
+                  <Route path="/rules/new" element={<RulesPage />} />
                   <Route path="/rules/:ruleId" element={<RuleDetailsPage />} />
                   <Route path="/entities" element={<EntitiesPage />} />
                   <Route path="/entities/:id" element={<EntityEditPage />} />

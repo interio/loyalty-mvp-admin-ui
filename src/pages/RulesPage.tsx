@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useApolloClient, useLazyQuery, useQuery } from "@apollo/client";
+import { useApolloClient, useQuery } from "@apollo/client";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -140,6 +140,7 @@ const createGroup = (operator: "AND" | "OR" = "AND"): ConditionGroup => ({
 export const RulesPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const isCreatePage = location.pathname === "/rules/new";
   const { user } = useAuth();
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const apolloClient = useApolloClient();
@@ -160,15 +161,13 @@ export const RulesPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
   const { data, loading: rulesLoading, error: rulesError, refetch } = useQuery(RULES_BY_TENANT_PAGE_QUERY, {
     variables: { tenantId: selectedTenantId ?? "", page, pageSize },
-    skip: !selectedTenantId,
+    skip: !selectedTenantId || isCreatePage,
   });
-  const [loadRules] = useLazyQuery(RULES_BY_TENANT_PAGE_QUERY);
   const rules: PointsRule[] = data?.pointsRulesByTenantPage?.nodes ?? [];
   const pageInfo = data?.pointsRulesByTenantPage?.pageInfo;
   const { data: ruleEntityData } = useQuery(RULE_ENTITIES_QUERY, {
@@ -197,9 +196,9 @@ export const RulesPage: React.FC = () => {
 
   const refreshRules = (location.state as { refreshRules?: boolean } | null)?.refreshRules === true;
   useEffect(() => {
-    if (!refreshRules || !selectedTenantId) return;
+    if (isCreatePage || !refreshRules || !selectedTenantId) return;
     void refetch({ tenantId: selectedTenantId, page, pageSize });
-  }, [refreshRules, selectedTenantId, page, pageSize, refetch]);
+  }, [isCreatePage, refreshRules, selectedTenantId, page, pageSize, refetch]);
 
   const toLocalDateTimeInput = (value: Date) => {
     const pad = (num: number) => String(num).padStart(2, "0");
@@ -231,11 +230,11 @@ export const RulesPage: React.FC = () => {
   }, [selectedTenantId]);
 
   useEffect(() => {
-    if (!showForm) return;
+    if (!isCreatePage) return;
     if (!effectiveFrom) {
       setEffectiveFrom(toLocalDateTimeInput(new Date()));
     }
-  }, [showForm, effectiveFrom]);
+  }, [isCreatePage, effectiveFrom]);
 
   useEffect(() => {
     if ((pageInfo?.totalPages ?? 0) > 0 && page > (pageInfo?.totalPages ?? 0)) {
@@ -283,11 +282,8 @@ export const RulesPage: React.FC = () => {
         }
 
         setMessage("Campaign saved.");
-        setShowForm(false);
         resetForm();
-        setPage(1);
-        await loadRules({ variables: { tenantId: selectedTenantId, page: 1, pageSize } });
-        refetch({ tenantId: selectedTenantId, page: 1, pageSize });
+        navigate("/rules", { state: { refreshRules: true } });
       } catch (err) {
         setError((err as Error).message);
       } finally {
@@ -329,11 +325,8 @@ export const RulesPage: React.FC = () => {
         throw new Error(detail || "Failed to save campaign");
       }
       setMessage("Campaign saved.");
-      setShowForm(false);
       resetForm();
-      setPage(1);
-      await loadRules({ variables: { tenantId: selectedTenantId, page: 1, pageSize } });
-      refetch({ tenantId: selectedTenantId, page: 1, pageSize });
+      navigate("/rules", { state: { refreshRules: true } });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -916,21 +909,33 @@ export const RulesPage: React.FC = () => {
       <CardContent>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center" mb={2} gap={2}>
           <Box>
-            <Typography variant="h5">Campaigns</Typography>
+            <Typography variant="h5">{isCreatePage ? "Create Campaign" : "Campaigns"}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {tenantName
-                ? `Campaigns for ${tenantName}`
-                : tenantsLoading
-                  ? "Loading tenants..."
-                  : "Select a tenant to view campaigns."}
+              {isCreatePage
+                ? tenantName
+                  ? `Create a campaign for ${tenantName}`
+                  : tenantsLoading
+                    ? "Loading tenants..."
+                    : "Select a tenant to create a campaign."
+                : tenantName
+                  ? `Campaigns for ${tenantName}`
+                  : tenantsLoading
+                    ? "Loading tenants..."
+                    : "Select a tenant to view campaigns."}
             </Typography>
           </Box>
-          <Button variant="contained" onClick={() => setShowForm((v) => !v)} disabled={!selectedTenantId}>
-            {showForm ? "Close form" : "Create campaign"}
-          </Button>
+          {isCreatePage ? (
+            <Button variant="outlined" onClick={() => navigate("/rules")}>
+              Back to campaigns
+            </Button>
+          ) : (
+            <Button variant="contained" onClick={() => navigate("/rules/new")} disabled={!selectedTenantId}>
+              Create campaign
+            </Button>
+          )}
         </Stack>
 
-        {showForm && (
+        {isCreatePage && (
           <Box
             component="form"
             onSubmit={handleSubmit}
@@ -1077,66 +1082,70 @@ export const RulesPage: React.FC = () => {
           </Box>
         )}
 
-        {selectedTenantId && (
+        {!isCreatePage && selectedTenantId && (
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 2 }}>
             Total campaigns: {pageInfo?.totalCount ?? 0}
           </Typography>
         )}
-        {rulesError && <Alert severity="error">{rulesError.message}</Alert>}
-        {rulesLoading && <LinearProgress />}
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Reward Points</TableCell>
-                <TableCell>Active</TableCell>
-                <TableCell>Effective From</TableCell>
-                <TableCell>Effective To</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rules.map((rule) => (
-                <TableRow
-                  key={rule.id}
-                  hover
-                  onClick={() => navigate(`/rules/${rule.id}`)}
-                  sx={{ cursor: "pointer" }}
-                >
-                  <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {rule.name}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>{rule.ruleType}</TableCell>
-                  <TableCell>{rule.rewardPoints}</TableCell>
-                  <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
-                  <TableCell>{formatDate(rule.effectiveFrom)}</TableCell>
-                  <TableCell>{formatDate(rule.effectiveTo)}</TableCell>
-                </TableRow>
-              ))}
-              {selectedTenantId && !rulesLoading && rules.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      No campaigns found for this tenant.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {(pageInfo?.totalPages ?? 0) > 1 && (
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-            <Pagination
-              count={pageInfo?.totalPages ?? 0}
-              page={page}
-              onChange={(_, value) => setPage(value)}
-              color="primary"
-            />
-          </Box>
+        {!isCreatePage && (
+          <>
+            {rulesError && <Alert severity="error">{rulesError.message}</Alert>}
+            {rulesLoading && <LinearProgress />}
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell>Reward Points</TableCell>
+                    <TableCell>Active</TableCell>
+                    <TableCell>Effective From</TableCell>
+                    <TableCell>Effective To</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rules.map((rule) => (
+                    <TableRow
+                      key={rule.id}
+                      hover
+                      onClick={() => navigate(`/rules/${rule.id}`)}
+                      sx={{ cursor: "pointer" }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {rule.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{rule.ruleType}</TableCell>
+                      <TableCell>{rule.rewardPoints}</TableCell>
+                      <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
+                      <TableCell>{formatDate(rule.effectiveFrom)}</TableCell>
+                      <TableCell>{formatDate(rule.effectiveTo)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {selectedTenantId && !rulesLoading && rules.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Typography variant="body2" color="text.secondary">
+                          No campaigns found for this tenant.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {(pageInfo?.totalPages ?? 0) > 1 && (
+              <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+                <Pagination
+                  count={pageInfo?.totalPages ?? 0}
+                  page={page}
+                  onChange={(_, value) => setPage(value)}
+                  color="primary"
+                />
+              </Box>
+            )}
+          </>
         )}
      </CardContent>
    </Card>
