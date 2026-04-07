@@ -9,7 +9,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Divider,
   FormControl,
   FormHelperText,
   InputLabel,
@@ -18,9 +17,6 @@ import {
   Pagination,
   Select,
   Stack,
-  Step,
-  StepLabel,
-  Stepper,
   Table,
   TableBody,
   TableCell,
@@ -48,6 +44,7 @@ type PointsRule = {
   id: string;
   tenantId: string;
   name: string;
+  description?: string | null;
   ruleType: string;
   rewardPoints: number;
   createdBy?: string | null;
@@ -145,6 +142,7 @@ export const RulesPage: React.FC = () => {
   const { selectedTenantId, tenants, loading: tenantsLoading } = useTenant();
   const apolloClient = useApolloClient();
   const [ruleName, setRuleName] = useState("");
+  const [shortDescription, setShortDescription] = useState("");
   const [ruleType, setRuleType] = useState<RuleType | "">("");
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveTo, setEffectiveTo] = useState("");
@@ -153,7 +151,6 @@ export const RulesPage: React.FC = () => {
   const [rewardPoints, setRewardPoints] = useState<number>(0);
   const [spendStep, setSpendStep] = useState<number>(0);
   const [pointsToGrant, setPointsToGrant] = useState<number>(0);
-  const [complexStep, setComplexStep] = useState(0);
   const [conditionTree, setConditionTree] = useState<ConditionGroup>(() => createGroup("AND"));
   const [attributesByEntity, setAttributesByEntity] = useState<Record<string, RuleAttribute[]>>({});
   const [operatorsByAttribute, setOperatorsByAttribute] = useState<Record<string, RuleAttributeOperator[]>>({});
@@ -209,6 +206,7 @@ export const RulesPage: React.FC = () => {
 
   const resetForm = () => {
     setRuleName("");
+    setShortDescription("");
     setRuleType("");
     setEffectiveFrom(toLocalDateTimeInput(new Date()));
     setEffectiveTo("");
@@ -217,7 +215,6 @@ export const RulesPage: React.FC = () => {
     setRewardPoints(0);
     setSpendStep(0);
     setPointsToGrant(0);
-    setComplexStep(0);
     setConditionTree(createGroup("AND"));
   };
 
@@ -242,12 +239,6 @@ export const RulesPage: React.FC = () => {
     }
   }, [pageInfo, page]);
 
-  useEffect(() => {
-    if (ruleType === "complex_rule") {
-      setComplexStep(0);
-    }
-  }, [ruleType]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTenantId) return;
@@ -261,6 +252,7 @@ export const RulesPage: React.FC = () => {
         const payload = {
           tenantId: selectedTenantId,
           name: ruleName.trim(),
+          description: shortDescription.trim() || null,
           ruleType: "complex_rule",
           createdBy,
           active: false,
@@ -303,6 +295,7 @@ export const RulesPage: React.FC = () => {
           {
             tenantId: selectedTenantId,
             name: ruleName.trim(),
+            description: shortDescription.trim() || null,
             ruleType,
             createdBy,
             rewardPoints: rewardPoints || 0,
@@ -949,6 +942,39 @@ export const RulesPage: React.FC = () => {
               required
               helperText="Give the campaign a descriptive name."
             />
+            <TextField
+              label="Campaign short description"
+              value={shortDescription}
+              onChange={(e) => setShortDescription(e.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+              inputProps={{ maxLength: 500 }}
+              helperText="Short summary shown in campaign views."
+            />
+            <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700 }}>
+                Campaign schedule
+              </Typography>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  label="Effective from"
+                  type="datetime-local"
+                  value={effectiveFrom}
+                  onChange={(e) => setEffectiveFrom(e.target.value)}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  label="Effective to"
+                  type="datetime-local"
+                  value={effectiveTo}
+                  onChange={(e) => setEffectiveTo(e.target.value)}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Stack>
+            </Box>
             <FormControl fullWidth required>
               <InputLabel id="rule-type-label">Campaign type</InputLabel>
               <Select
@@ -963,62 +989,13 @@ export const RulesPage: React.FC = () => {
               </Select>
             </FormControl>
 
-            {ruleFields}
-
-            {!isComplexRule && (
-              <>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <TextField
-                    label="Effective from"
-                    type="datetime-local"
-                    value={effectiveFrom}
-                    onChange={(e) => setEffectiveFrom(e.target.value)}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                  />
-                  <TextField
-                    label="Effective to"
-                    type="datetime-local"
-                    value={effectiveTo}
-                    onChange={(e) => setEffectiveTo(e.target.value)}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Stack>
-              </>
-            )}
-
-            {isComplexRule && (
+            {ruleType && (
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
-                <Stepper activeStep={complexStep} sx={{ mb: 2 }}>
-                  <Step>
-                    <StepLabel>Campaign details</StepLabel>
-                  </Step>
-                  <Step>
-                    <StepLabel>Conditions builder</StepLabel>
-                  </Step>
-                </Stepper>
-
-                {complexStep === 0 && (
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700 }}>
+                  Rule builder
+                </Typography>
+                {isComplexRule ? (
                   <Stack spacing={2}>
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                      <TextField
-                        label="Effective from"
-                        type="datetime-local"
-                        value={effectiveFrom}
-                        onChange={(e) => setEffectiveFrom(e.target.value)}
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                      />
-                      <TextField
-                        label="Effective to"
-                        type="datetime-local"
-                        value={effectiveTo}
-                        onChange={(e) => setEffectiveTo(e.target.value)}
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                      />
-                    </Stack>
                     <TextField
                       label="Points to grant"
                       type="number"
@@ -1027,11 +1004,6 @@ export const RulesPage: React.FC = () => {
                       fullWidth
                       inputProps={{ min: 0 }}
                     />
-                  </Stack>
-                )}
-
-                {complexStep === 1 && (
-                  <Stack spacing={2}>
                     {selectedTenantId ? (
                       ruleEntities.length === 0 ? (
                         <Alert severity="info">No entities available yet. Create entities and attributes first.</Alert>
@@ -1042,43 +1014,20 @@ export const RulesPage: React.FC = () => {
                       <Alert severity="info">Select a tenant to build conditions.</Alert>
                     )}
                   </Stack>
+                ) : (
+                  ruleFields
                 )}
-
-                <Divider sx={{ my: 2 }} />
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mt: 2 }}>
-                  {complexStep > 0 && (
-                    <Button variant="outlined" onClick={() => setComplexStep(0)}>
-                      Back
-                    </Button>
-                  )}
-                  {complexStep === 0 && (
-                    <Button
-                      variant="contained"
-                      onClick={() => setComplexStep(1)}
-                      disabled={!complexDetailsValid}
-                    >
-                      Next
-                    </Button>
-                  )}
-                  {complexStep === 1 && (
-                    <Button type="submit" variant="contained" disabled={disabled}>
-                      {loading ? "Saving..." : "Save campaign"}
-                    </Button>
-                  )}
-                </Stack>
               </Box>
             )}
 
             {error && <Alert severity="error">{error}</Alert>}
             {message && <Alert severity="success">{message}</Alert>}
 
-            {!isComplexRule && (
-              <Box>
-                <Button type="submit" variant="contained" disabled={disabled}>
-                  {loading ? "Saving..." : "Save campaign"}
-                </Button>
-              </Box>
-            )}
+            <Box>
+              <Button type="submit" variant="contained" disabled={disabled}>
+                {loading ? "Saving..." : "Save campaign"}
+              </Button>
+            </Box>
           </Box>
         )}
 
@@ -1096,6 +1045,7 @@ export const RulesPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Name</TableCell>
+                    <TableCell>Description</TableCell>
                     <TableCell>Type</TableCell>
                     <TableCell>Reward Points</TableCell>
                     <TableCell>Active</TableCell>
@@ -1116,6 +1066,7 @@ export const RulesPage: React.FC = () => {
                           {rule.name}
                         </Typography>
                       </TableCell>
+                      <TableCell>{rule.description?.trim() ? rule.description : "—"}</TableCell>
                       <TableCell>{rule.ruleType}</TableCell>
                       <TableCell>{rule.rewardPoints}</TableCell>
                       <TableCell>{rule.active ? "Yes" : "No"}</TableCell>
@@ -1125,7 +1076,7 @@ export const RulesPage: React.FC = () => {
                   ))}
                   {selectedTenantId && !rulesLoading && rules.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6}>
+                      <TableCell colSpan={7}>
                         <Typography variant="body2" color="text.secondary">
                           No campaigns found for this tenant.
                         </Typography>

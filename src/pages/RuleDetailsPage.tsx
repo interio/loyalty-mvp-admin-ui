@@ -30,6 +30,7 @@ type PointsRule = {
   id: string;
   tenantId: string;
   name: string;
+  description?: string | null;
   ruleType: string;
   rewardPoints: number;
   createdBy?: string | null;
@@ -421,6 +422,9 @@ export const RuleDetailsPage: React.FC = () => {
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 Name: {rule.name}
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Short description: {rule.description?.trim() ? rule.description : "—"}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 Rule type: {rule.ruleType}

@@ -6,6 +6,7 @@ export const RULES_BY_TENANT_QUERY = gql`
       id
       tenantId
       name
+      description
       ruleType
       rewardPoints
       active
@@ -30,6 +31,7 @@ export const RULES_BY_TENANT_PAGE_QUERY = gql`
         id
         tenantId
         name
+        description
         ruleType
         rewardPoints
         active
