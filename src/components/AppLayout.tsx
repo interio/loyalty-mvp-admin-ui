@@ -43,7 +43,7 @@ const navItems = [
   { label: "Distributors", path: "/distributors", icon: <LocalShippingIcon /> },
   { label: "Reward Catalog", path: "/reward-products", icon: <CardGiftcardIcon /> },
   { label: "Reward Orders", path: "/reward-orders", icon: <RedeemIcon /> },
-  { label: "Rules", path: "/rules", icon: <RuleIcon /> },
+  { label: "Campaigns", path: "/rules", icon: <RuleIcon /> },
   { label: "Entities", path: "/entities", icon: <AccountTreeIcon /> },
   { label: "Orders", path: "/invoices", icon: <ReceiptLongIcon /> },
 ];

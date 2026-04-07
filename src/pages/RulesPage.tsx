@@ -279,10 +279,10 @@ export const RulesPage: React.FC = () => {
 
         if (!res.ok) {
           const detail = await res.text();
-          throw new Error(detail || "Failed to save rule");
+          throw new Error(detail || "Failed to save campaign");
         }
 
-        setMessage("Rule saved.");
+        setMessage("Campaign saved.");
         setShowForm(false);
         resetForm();
         setPage(1);
@@ -326,9 +326,9 @@ export const RulesPage: React.FC = () => {
 
       if (!res.ok) {
         const detail = await res.text();
-        throw new Error(detail || "Failed to save rule");
+        throw new Error(detail || "Failed to save campaign");
       }
-      setMessage("Rule saved.");
+      setMessage("Campaign saved.");
       setShowForm(false);
       resetForm();
       setPage(1);
@@ -916,17 +916,17 @@ export const RulesPage: React.FC = () => {
       <CardContent>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems="center" mb={2} gap={2}>
           <Box>
-            <Typography variant="h5">Points Rules</Typography>
+            <Typography variant="h5">Campaigns</Typography>
             <Typography variant="body2" color="text.secondary">
               {tenantName
-                ? `Rules for ${tenantName}`
+                ? `Campaigns for ${tenantName}`
                 : tenantsLoading
                   ? "Loading tenants..."
-                  : "Select a tenant to view rules."}
+                  : "Select a tenant to view campaigns."}
             </Typography>
           </Box>
           <Button variant="contained" onClick={() => setShowForm((v) => !v)} disabled={!selectedTenantId}>
-            {showForm ? "Close form" : "Create rule"}
+            {showForm ? "Close form" : "Create campaign"}
           </Button>
         </Stack>
 
@@ -937,24 +937,24 @@ export const RulesPage: React.FC = () => {
             sx={{ mt: 2, mb: 3, p: 2, border: "1px solid", borderColor: "divider", borderRadius: 2, display: "flex", flexDirection: "column", gap: 2 }}
           >
             <TextField
-              label="Rule name"
+              label="Campaign name"
               value={ruleName}
               onChange={(e) => setRuleName(e.target.value)}
               fullWidth
               required
-              helperText="Give the rule a descriptive name."
+              helperText="Give the campaign a descriptive name."
             />
             <FormControl fullWidth required>
-              <InputLabel id="rule-type-label">Rule type</InputLabel>
+              <InputLabel id="rule-type-label">Campaign type</InputLabel>
               <Select
                 labelId="rule-type-label"
                 value={ruleType}
-                label="Rule type"
+                label="Campaign type"
                 onChange={(e) => setRuleType(e.target.value as RuleType)}
               >
                 <MenuItem value="spend">Spend X get Y points</MenuItem>
-                <MenuItem value="sku_quantity">SKU quantity rule</MenuItem>
-                <MenuItem value="complex_rule">Complex Rule</MenuItem>
+                <MenuItem value="sku_quantity">SKU quantity campaign</MenuItem>
+                <MenuItem value="complex_rule">Complex campaign</MenuItem>
               </Select>
             </FormControl>
 
@@ -987,7 +987,7 @@ export const RulesPage: React.FC = () => {
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
                 <Stepper activeStep={complexStep} sx={{ mb: 2 }}>
                   <Step>
-                    <StepLabel>Rule details</StepLabel>
+                    <StepLabel>Campaign details</StepLabel>
                   </Step>
                   <Step>
                     <StepLabel>Conditions builder</StepLabel>
@@ -1057,7 +1057,7 @@ export const RulesPage: React.FC = () => {
                   )}
                   {complexStep === 1 && (
                     <Button type="submit" variant="contained" disabled={disabled}>
-                      {loading ? "Saving..." : "Save rule"}
+                      {loading ? "Saving..." : "Save campaign"}
                     </Button>
                   )}
                 </Stack>
@@ -1070,7 +1070,7 @@ export const RulesPage: React.FC = () => {
             {!isComplexRule && (
               <Box>
                 <Button type="submit" variant="contained" disabled={disabled}>
-                  {loading ? "Saving..." : "Save rule"}
+                  {loading ? "Saving..." : "Save campaign"}
                 </Button>
               </Box>
             )}
@@ -1079,7 +1079,7 @@ export const RulesPage: React.FC = () => {
 
         {selectedTenantId && (
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, mb: 2 }}>
-            Total rules: {pageInfo?.totalCount ?? 0}
+            Total campaigns: {pageInfo?.totalCount ?? 0}
           </Typography>
         )}
         {rulesError && <Alert severity="error">{rulesError.message}</Alert>}
@@ -1120,7 +1120,7 @@ export const RulesPage: React.FC = () => {
                 <TableRow>
                   <TableCell colSpan={6}>
                     <Typography variant="body2" color="text.secondary">
-                      No rules found for this tenant.
+                      No campaigns found for this tenant.
                     </Typography>
                   </TableCell>
                 </TableRow>
