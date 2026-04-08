@@ -150,6 +150,7 @@ const sanitizeSkuValues = (values: string[]) => {
   });
   return normalized;
 };
+const mergeSkuValues = (values: string[], pendingInput: string) => sanitizeSkuValues([...values, pendingInput]);
 
 export const RulesPage: React.FC = () => {
   const location = useLocation();
@@ -164,6 +165,7 @@ export const RulesPage: React.FC = () => {
   const [effectiveFrom, setEffectiveFrom] = useState("");
   const [effectiveTo, setEffectiveTo] = useState("");
   const [skus, setSkus] = useState<string[]>([]);
+  const [skuInputValue, setSkuInputValue] = useState("");
   const [quantityStep, setQuantityStep] = useState<number>(0);
   const [rewardPoints, setRewardPoints] = useState<number>(0);
   const [spendStep, setSpendStep] = useState<number>(0);
@@ -205,10 +207,10 @@ export const RulesPage: React.FC = () => {
   const isComplexRule = ruleType === "complex_rule";
   const isSkuQuantityRule = ruleType === "sku_quantity";
   const isSpendRule = ruleType === "spend";
-  const normalizedSkus = useMemo(() => sanitizeSkuValues(skus), [skus]);
+  const effectiveSkus = useMemo(() => mergeSkuValues(skus, skuInputValue), [skus, skuInputValue]);
   const complexDetailsValid = ruleName.trim().length > 0 && pointsToGrant > 0;
   const simpleRuleValid = isSkuQuantityRule
-    ? normalizedSkus.length > 0 && quantityStep > 0 && rewardPoints > 0
+    ? effectiveSkus.length > 0 && quantityStep > 0 && rewardPoints > 0
     : isSpendRule
       ? spendStep > 0 && rewardPoints > 0
       : true;
@@ -219,6 +221,40 @@ export const RulesPage: React.FC = () => {
     loading ||
     (isComplexRule && !complexDetailsValid) ||
     (!isComplexRule && !simpleRuleValid);
+  const validationHint = useMemo(() => {
+    if (loading) return null;
+    if (!selectedTenantId) return "Select a tenant first.";
+    if (!ruleName.trim()) return "Campaign name is required.";
+    if (!ruleType) return "Select a campaign type.";
+    if (isComplexRule && !complexDetailsValid) return "Points to grant must be greater than 0 for complex campaign.";
+    if (!isComplexRule && !simpleRuleValid) {
+      if (isSkuQuantityRule) {
+        if (effectiveSkus.length === 0) return "Add at least one SKU (press Enter or click outside the field to apply input).";
+        if (quantityStep <= 0) return "Quantity step must be greater than 0.";
+        if (rewardPoints <= 0) return "Reward points must be greater than 0.";
+      }
+      if (isSpendRule) {
+        if (spendStep <= 0) return "Spend step must be greater than 0.";
+        if (rewardPoints <= 0) return "Reward points must be greater than 0.";
+      }
+    }
+
+    return null;
+  }, [
+    loading,
+    selectedTenantId,
+    ruleName,
+    ruleType,
+    isComplexRule,
+    complexDetailsValid,
+    simpleRuleValid,
+    isSkuQuantityRule,
+    effectiveSkus.length,
+    quantityStep,
+    rewardPoints,
+    isSpendRule,
+    spendStep,
+  ]);
   // Temporary: until real backend auth exists, we pass the email from local dummy auth.
   const createdBy = user?.email?.trim().toLowerCase() ?? "unknown-admin@example.local";
 
@@ -242,6 +278,7 @@ export const RulesPage: React.FC = () => {
     setEffectiveFrom(toLocalDateTimeInput(new Date()));
     setEffectiveTo("");
     setSkus([]);
+    setSkuInputValue("");
     setQuantityStep(0);
     setRewardPoints(0);
     setSpendStep(0);
@@ -316,9 +353,12 @@ export const RulesPage: React.FC = () => {
     }
     setLoading(true);
     try {
+      const submittedSkus = mergeSkuValues(skus, skuInputValue);
+      setSkus(submittedSkus);
+      setSkuInputValue("");
       const conditions =
         ruleType === "sku_quantity"
-          ? { skus: normalizedSkus, quantityStep: quantityStep || 0 }
+          ? { skus: submittedSkus, quantityStep: quantityStep || 0 }
           : { spendStep: spendStep || 0 };
 
       const payload = {
@@ -367,12 +407,22 @@ export const RulesPage: React.FC = () => {
             freeSolo
             options={[] as string[]}
             value={skus}
+            inputValue={skuInputValue}
+            onInputChange={(_, newInputValue) => setSkuInputValue(newInputValue)}
+            onBlur={() => {
+              const merged = mergeSkuValues(skus, skuInputValue);
+              if (merged.length !== skus.length || skuInputValue.trim().length > 0) {
+                setSkus(merged);
+              }
+              if (skuInputValue) {
+                setSkuInputValue("");
+              }
+            }}
             onChange={(_, newValue) => setSkus(sanitizeSkuValues((newValue as string[]).map((value) => String(value))))}
             renderInput={(params) => (
               <TextField
                 {...params}
                 label="Product SKUs"
-                required
                 helperText="Add one or more SKUs. Points are calculated per SKU separately. You can enter or paste comma-separated SKUs."
               />
             )}
@@ -422,7 +472,7 @@ export const RulesPage: React.FC = () => {
     }
 
     return null;
-  }, [ruleType, skus, quantityStep, rewardPoints, spendStep]);
+  }, [ruleType, skus, skuInputValue, quantityStep, rewardPoints, spendStep]);
 
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
   const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
@@ -1061,6 +1111,7 @@ export const RulesPage: React.FC = () => {
 
             {error && <Alert severity="error">{error}</Alert>}
             {message && <Alert severity="success">{message}</Alert>}
+            {!error && validationHint && <Alert severity="info">{validationHint}</Alert>}
 
             <Box>
               <Button type="submit" variant="contained" disabled={disabled}>
