@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useApolloClient, useQuery } from "@apollo/client";
 import { useLocation, useNavigate } from "react-router-dom";
+import SearchIcon from "@mui/icons-material/Search";
 import {
   Alert,
   Autocomplete,
@@ -28,6 +29,7 @@ import {
 } from "@mui/material";
 import { apiBaseUrl } from "../config";
 import { useAuth } from "../auth/AuthContext";
+import { ProductPickerDrawer } from "../components/ProductPickerDrawer";
 import { useTenant } from "../modules/tenants/TenantContext";
 import {
   RULE_ATTRIBUTE_OPERATORS_QUERY,
@@ -170,6 +172,7 @@ export const RulesPage: React.FC = () => {
   const [rewardPoints, setRewardPoints] = useState<number>(0);
   const [spendStep, setSpendStep] = useState<number>(0);
   const [pointsToGrant, setPointsToGrant] = useState<number>(0);
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [conditionTree, setConditionTree] = useState<ConditionGroup>(() => createGroup("AND"));
   const [attributesByEntity, setAttributesByEntity] = useState<Record<string, RuleAttribute[]>>({});
   const [operatorsByAttribute, setOperatorsByAttribute] = useState<Record<string, RuleAttributeOperator[]>>({});
@@ -283,6 +286,7 @@ export const RulesPage: React.FC = () => {
     setRewardPoints(0);
     setSpendStep(0);
     setPointsToGrant(0);
+    setProductPickerOpen(false);
     setConditionTree(createGroup("AND"));
   };
 
@@ -291,6 +295,7 @@ export const RulesPage: React.FC = () => {
     setAttributesByEntity({});
     setOperatorsByAttribute({});
     setOptionsByAttribute({});
+    setProductPickerOpen(false);
     setConditionTree(createGroup("AND"));
   }, [selectedTenantId]);
 
@@ -401,7 +406,20 @@ export const RulesPage: React.FC = () => {
   const ruleFields = useMemo(() => {
     if (ruleType === "sku_quantity") {
       return (
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <Stack spacing={2}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
+            <Button
+              variant="outlined"
+              startIcon={<SearchIcon />}
+              onClick={() => setProductPickerOpen(true)}
+              disabled={!selectedTenantId}
+            >
+              Open product picker
+            </Button>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Selected products: {skus.length}
+            </Typography>
+          </Stack>
           <Autocomplete
             multiple
             freeSolo
@@ -423,27 +441,29 @@ export const RulesPage: React.FC = () => {
               <TextField
                 {...params}
                 label="Product SKUs"
-                helperText="Add one or more SKUs. Points are calculated per SKU separately. You can enter or paste comma-separated SKUs."
+                helperText="Add one or more SKUs. Use the product picker or enter/paste comma-separated SKUs manually."
               />
             )}
             fullWidth
           />
-          <TextField
-            label="Quantity step (X)"
-            type="number"
-            value={quantityStep || ""}
-            onChange={(e) => setQuantityStep(Number(e.target.value))}
-            fullWidth
-            required
-          />
-          <TextField
-            label="Reward points (Y)"
-            type="number"
-            value={rewardPoints || ""}
-            onChange={(e) => setRewardPoints(Number(e.target.value))}
-            fullWidth
-            required
-          />
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <TextField
+              label="Quantity step (X)"
+              type="number"
+              value={quantityStep || ""}
+              onChange={(e) => setQuantityStep(Number(e.target.value))}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Reward points (Y)"
+              type="number"
+              value={rewardPoints || ""}
+              onChange={(e) => setRewardPoints(Number(e.target.value))}
+              fullWidth
+              required
+            />
+          </Stack>
         </Stack>
       );
     }
@@ -472,7 +492,7 @@ export const RulesPage: React.FC = () => {
     }
 
     return null;
-  }, [ruleType, skus, skuInputValue, quantityStep, rewardPoints, spendStep]);
+  }, [ruleType, skus, skuInputValue, quantityStep, rewardPoints, spendStep, selectedTenantId]);
 
   const tenantName = useMemo(() => tenants.find((t) => t.id === selectedTenantId)?.name, [tenants, selectedTenantId]);
   const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleString() : "—");
@@ -1118,6 +1138,17 @@ export const RulesPage: React.FC = () => {
                 {loading ? "Saving..." : "Save campaign"}
               </Button>
             </Box>
+
+            <ProductPickerDrawer
+              open={productPickerOpen}
+              tenantId={selectedTenantId}
+              selectedSkus={skus}
+              onClose={() => setProductPickerOpen(false)}
+              onConfirm={(selectedSkusFromPicker) => {
+                setSkus(sanitizeSkuValues(selectedSkusFromPicker));
+                setSkuInputValue("");
+              }}
+            />
           </Box>
         )}
 
