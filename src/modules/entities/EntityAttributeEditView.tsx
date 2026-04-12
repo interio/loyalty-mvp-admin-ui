@@ -13,6 +13,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  FormHelperText,
   FormControlLabel,
   FormGroup,
   InputLabel,
@@ -72,7 +73,7 @@ type RuleOperator = {
 };
 
 const valueTypeOptions = ["string", "number", "bool", "date", "enum"] as const;
-const uiControlOptions = ["text", "number", "select", "multiselect"] as const;
+const uiControlOptions = ["text", "number", "select", "multiselect", "product_picker"] as const;
 
 export const EntityAttributeEditView: React.FC = () => {
   const { entityId, attributeId } = useParams<{ entityId: string; attributeId: string }>();
@@ -518,6 +519,9 @@ export const EntityAttributeEditView: React.FC = () => {
                   </MenuItem>
                 ))}
               </Select>
+              <FormHelperText>
+                Use `product_picker` to enable the product picker in campaign rule builder.
+              </FormHelperText>
             </FormControl>
           </Stack>
 

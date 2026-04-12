@@ -173,6 +173,7 @@ export const RulesPage: React.FC = () => {
   const [spendStep, setSpendStep] = useState<number>(0);
   const [pointsToGrant, setPointsToGrant] = useState<number>(0);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [complexProductPickerConditionId, setComplexProductPickerConditionId] = useState<string | null>(null);
   const [conditionTree, setConditionTree] = useState<ConditionGroup>(() => createGroup("AND"));
   const [attributesByEntity, setAttributesByEntity] = useState<Record<string, RuleAttribute[]>>({});
   const [operatorsByAttribute, setOperatorsByAttribute] = useState<Record<string, RuleAttributeOperator[]>>({});
@@ -287,6 +288,7 @@ export const RulesPage: React.FC = () => {
     setSpendStep(0);
     setPointsToGrant(0);
     setProductPickerOpen(false);
+    setComplexProductPickerConditionId(null);
     setConditionTree(createGroup("AND"));
   };
 
@@ -296,6 +298,7 @@ export const RulesPage: React.FC = () => {
     setOperatorsByAttribute({});
     setOptionsByAttribute({});
     setProductPickerOpen(false);
+    setComplexProductPickerConditionId(null);
     setConditionTree(createGroup("AND"));
   }, [selectedTenantId]);
 
@@ -543,6 +546,21 @@ export const RulesPage: React.FC = () => {
     return getAttributesForEntity(entityId).find((attr) => attr.id === attributeId);
   };
 
+  const usesMultiValueInput = (condition: ConditionRow, attribute: RuleAttribute) =>
+    attribute.isMultiValue || attribute.uiControl === "multiselect" || condition.operator === "in" || condition.operator === "nin";
+
+  const isProductPickerAttribute = (attribute: RuleAttribute) => {
+    const normalizedUiControl = attribute.uiControl.trim().toLowerCase().replace(/[\s-]/g, "_");
+    return normalizedUiControl === "product_picker" || normalizedUiControl === "productpicker";
+  };
+
+  const getConditionSkuValues = (condition: ConditionRow, attribute: RuleAttribute) => {
+    if (usesMultiValueInput(condition, attribute)) {
+      return sanitizeSkuValues(condition.values ?? []);
+    }
+    return sanitizeSkuValues(condition.value ? [condition.value] : []);
+  };
+
   const normalizeScalarValue = (raw: string, attribute: RuleAttribute, errors: string[]) => {
     const trimmed = raw.trim();
     if (trimmed.length === 0) {
@@ -694,6 +712,15 @@ export const RulesPage: React.FC = () => {
     setConditionTree((prev) => (removeNode(prev, nodeId) as ConditionGroup) ?? prev);
   };
 
+  const findConditionById = (node: ConditionNode, targetId: string): ConditionRow | null => {
+    if (node.type === "condition") return node.id === targetId ? node : null;
+    for (const child of node.children) {
+      const found = findConditionById(child, targetId);
+      if (found) return found;
+    }
+    return null;
+  };
+
   const renderValueInput = (condition: ConditionRow, attribute?: RuleAttribute) => {
     if (!attribute) {
       return <TextField label="Value" value="" disabled fullWidth />;
@@ -703,6 +730,74 @@ export const RulesPage: React.FC = () => {
     const isEnumLike = attribute.valueType === "enum" || attribute.uiControl === "select" || attribute.uiControl === "multiselect";
     const options = optionsByAttribute[attribute.id] ?? [];
     const operator = condition.operator;
+
+    if (isProductPickerAttribute(attribute)) {
+      const selectedCount = getConditionSkuValues(condition, attribute).length;
+      if (usesMultiValueInput(condition, attribute)) {
+        return (
+          <Stack spacing={1}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<SearchIcon />}
+                onClick={() => setComplexProductPickerConditionId(condition.id)}
+                disabled={!selectedTenantId}
+              >
+                Open product picker
+              </Button>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Selected products: {selectedCount}
+              </Typography>
+            </Stack>
+            <Autocomplete
+              multiple
+              freeSolo
+              options={[] as string[]}
+              value={condition.values ?? []}
+              onChange={(_, newValue) =>
+                updateCondition(condition.id, {
+                  values: sanitizeSkuValues((newValue as string[]).map((value) => String(value))),
+                })
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="SKUs"
+                  helperText="Choose products from picker or enter/paste SKU values manually."
+                />
+              )}
+            />
+          </Stack>
+        );
+      }
+
+      return (
+        <Stack spacing={1}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }}>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SearchIcon />}
+              onClick={() => setComplexProductPickerConditionId(condition.id)}
+              disabled={!selectedTenantId}
+            >
+              Open product picker
+            </Button>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+              Selected products: {selectedCount}
+            </Typography>
+          </Stack>
+          <TextField
+            label="SKU"
+            value={condition.value ?? ""}
+            onChange={(e) => updateCondition(condition.id, { value: e.target.value })}
+            fullWidth
+            helperText="Choose a product from picker or enter SKU manually."
+          />
+        </Stack>
+      );
+    }
 
     if (isEnumLike) {
       if (options.length === 0) {
@@ -1006,6 +1101,22 @@ export const RulesPage: React.FC = () => {
     </Box>
   );
 
+  const complexPickerCondition = complexProductPickerConditionId
+    ? findConditionById(conditionTree, complexProductPickerConditionId)
+    : null;
+  const complexPickerAttribute = complexPickerCondition
+    ? getAttributeById(complexPickerCondition.entityId, complexPickerCondition.attributeId)
+    : undefined;
+  const canOpenComplexProductPicker = Boolean(
+    complexPickerCondition &&
+      complexPickerAttribute &&
+      isProductPickerAttribute(complexPickerAttribute),
+  );
+  const complexPickerSelectedSkus =
+    complexPickerCondition && complexPickerAttribute && canOpenComplexProductPicker
+      ? getConditionSkuValues(complexPickerCondition, complexPickerAttribute)
+      : [];
+
   return (
     <Card sx={{ borderRadius: 2, boxShadow: "0 4px 14px rgba(195,195,195,0.28)" }}>
       <CardContent>
@@ -1147,6 +1258,29 @@ export const RulesPage: React.FC = () => {
               onConfirm={(selectedSkusFromPicker) => {
                 setSkus(sanitizeSkuValues(selectedSkusFromPicker));
                 setSkuInputValue("");
+              }}
+            />
+            <ProductPickerDrawer
+              open={canOpenComplexProductPicker}
+              tenantId={selectedTenantId}
+              selectedSkus={complexPickerSelectedSkus}
+              onClose={() => setComplexProductPickerConditionId(null)}
+              onConfirm={(selectedSkusFromPicker) => {
+                const targetConditionId = complexProductPickerConditionId;
+                if (!targetConditionId) return;
+                const normalizedSkus = sanitizeSkuValues(selectedSkusFromPicker);
+                setConditionTree((prev) =>
+                  updateNode(prev, targetConditionId, (node) => {
+                    if (node.type !== "condition") return node;
+                    const attribute = getAttributeById(node.entityId, node.attributeId);
+                    if (!attribute || !isProductPickerAttribute(attribute)) return node;
+                    if (usesMultiValueInput(node, attribute)) {
+                      return { ...node, values: normalizedSkus, value: "" };
+                    }
+                    return { ...node, value: normalizedSkus[0] ?? "", values: [] };
+                  }) as ConditionGroup,
+                );
+                setComplexProductPickerConditionId(null);
               }}
             />
           </Box>
