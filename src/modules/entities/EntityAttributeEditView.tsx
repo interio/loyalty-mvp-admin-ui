@@ -74,6 +74,13 @@ type RuleOperator = {
 
 const valueTypeOptions = ["string", "number", "bool", "date", "enum"] as const;
 const uiControlOptions = ["text", "number", "select", "multiselect", "product_picker"] as const;
+const valueTypeOptionMeta: Record<(typeof valueTypeOptions)[number], { label: string; description: string }> = {
+  string: { label: "Text", description: "Free text value." },
+  number: { label: "Number", description: "Numeric value, for example quantity or threshold." },
+  bool: { label: "Yes / No", description: "Boolean value: true or false." },
+  date: { label: "Date", description: "Date or date-time value." },
+  enum: { label: "Predefined list (enum)", description: "Value must be selected from configured options." },
+};
 
 export const EntityAttributeEditView: React.FC = () => {
   const { entityId, attributeId } = useParams<{ entityId: string; attributeId: string }>();
@@ -215,6 +222,7 @@ export const EntityAttributeEditView: React.FC = () => {
     skip: !attribute?.id,
   });
   const options: RuleAttributeOption[] = optionsData?.ruleAttributeOptions ?? [];
+  const valueTypeDescription = valueTypeOptionMeta[valueType as (typeof valueTypeOptions)[number]]?.description ?? "";
 
   useEffect(() => {
     if (options.length === 0) return;
@@ -500,10 +508,11 @@ export const EntityAttributeEditView: React.FC = () => {
               >
                 {valueTypeOptions.map((option) => (
                   <MenuItem key={option} value={option}>
-                    {option}
+                    {valueTypeOptionMeta[option].label}
                   </MenuItem>
                 ))}
               </Select>
+              <FormHelperText>{valueTypeDescription}</FormHelperText>
             </FormControl>
             <FormControl fullWidth>
               <InputLabel id="attribute-ui-control">UI control</InputLabel>
@@ -553,11 +562,11 @@ export const EntityAttributeEditView: React.FC = () => {
 
           <Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-              Options (for select/enum attributes)
+              Options (for predefined lists and select controls)
             </Typography>
             {!isOptionsEnabled && (
               <Alert severity="info">
-                Enable options by setting value type to enum or UI control to select/multiselect.
+                To configure selectable options, choose Value type "Predefined list (enum)" or UI control "select/multiselect".
               </Alert>
             )}
             {isOptionsEnabled && !attribute && (
