@@ -8,6 +8,17 @@ export const CUSTOMERS_BY_TENANT_QUERY = gql`
       tier
       externalId
       contactEmail
+      phoneNumber
+      type
+      businessSegment
+      onboardDate
+      status
+      address {
+        address
+        countryCode
+        postalCode
+        region
+      }
       tenantId
       createdAt
       pointsAccount {
@@ -27,6 +38,17 @@ export const CUSTOMERS_BY_TENANT_PAGE_QUERY = gql`
         tier
         externalId
         contactEmail
+        phoneNumber
+        type
+        businessSegment
+        onboardDate
+        status
+        address {
+          address
+          countryCode
+          postalCode
+          region
+        }
         tenantId
         createdAt
         pointsAccount {
@@ -52,6 +74,17 @@ export const CUSTOMERS_BY_TENANT_SEARCH_QUERY = gql`
       tier
       externalId
       contactEmail
+      phoneNumber
+      type
+      businessSegment
+      onboardDate
+      status
+      address {
+        address
+        countryCode
+        postalCode
+        region
+      }
       tenantId
       createdAt
       pointsAccount {
@@ -70,6 +103,17 @@ export const CUSTOMER_QUERY = gql`
       tier
       externalId
       contactEmail
+      phoneNumber
+      type
+      businessSegment
+      onboardDate
+      status
+      address {
+        address
+        countryCode
+        postalCode
+        region
+      }
       tenantId
       createdAt
       pointsAccount {

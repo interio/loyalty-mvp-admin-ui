@@ -39,12 +39,25 @@ import { useTenant } from "../tenants/TenantContext";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useAuth } from "../../auth/AuthContext";
 
+type CustomerAddress = {
+  address?: string;
+  countryCode?: string;
+  postalCode?: string;
+  region?: string;
+};
+
 type Customer = {
   id: string;
   name: string;
   tier?: string;
   externalId?: string;
   contactEmail?: string;
+  phoneNumber?: string;
+  type?: string;
+  businessSegment?: string;
+  onboardDate?: string;
+  status?: number;
+  address?: CustomerAddress | null;
   tenantId: string;
   createdAt?: string;
   pointsAccount?: {
@@ -54,6 +67,11 @@ type Customer = {
 };
 
 const TIER_OPTIONS = ["bronze", "silver", "gold", "platinum"] as const;
+const CUSTOMER_STATUS_LABELS: Record<number, string> = {
+  0: "Inactive",
+  1: "Active",
+  2: "Suspended",
+};
 
 export const CustomersView: React.FC = () => {
   const location = useLocation();
@@ -160,6 +178,10 @@ export const CustomersView: React.FC = () => {
 
   const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : "-");
   const formatTierLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+  const formatCustomerStatus = (status?: number) => {
+    if (status === undefined || status === null) return "—";
+    return `${CUSTOMER_STATUS_LABELS[status] ?? "Unknown"} (${status})`;
+  };
 
   const openAdjustDialog = (customerId: string) => {
     setAdjustCustomerId(customerId);
@@ -255,7 +277,7 @@ export const CustomersView: React.FC = () => {
       <CardContent>
         <Stack spacing={2}>
           <TextField
-            placeholder="Search customers by name, email, external ID, or ID"
+            placeholder="Search customers by name, email, external ID, phone, type, segment, or ID"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             disabled={!selectedTenantId}
@@ -287,6 +309,7 @@ export const CustomersView: React.FC = () => {
                   <TableCell>Balance</TableCell>
                   <TableCell>External ID</TableCell>
                   <TableCell>Contact Email</TableCell>
+                  <TableCell>Status</TableCell>
                   <TableCell>Created</TableCell>
                 </TableRow>
               </TableHead>
@@ -306,10 +329,11 @@ export const CustomersView: React.FC = () => {
                         <TableCell>{customer.pointsAccount?.balance ?? 0}</TableCell>
                         <TableCell>{customer.externalId ?? "—"}</TableCell>
                         <TableCell>{customer.contactEmail ?? "—"}</TableCell>
+                        <TableCell>{formatCustomerStatus(customer.status)}</TableCell>
                         <TableCell>{formatDate(customer.createdAt)}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
+                        <TableCell colSpan={7} sx={{ p: 0, border: 0 }}>
                           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                             <Box sx={{ px: 3, py: 2, bgcolor: "#F5F6F4", borderTop: "1px solid", borderColor: "divider" }}>
                               <Grid2 container spacing={2}>
@@ -331,6 +355,33 @@ export const CustomersView: React.FC = () => {
                                         </Grid2>
                                         <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField label="Contact Email" value={customer.contactEmail ?? "—"} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Phone Number" value={customer.phoneNumber ?? "—"} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Type" value={customer.type ?? "—"} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Business Segment" value={customer.businessSegment ?? "—"} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Onboard Date" value={formatDate(customer.onboardDate)} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Status" value={formatCustomerStatus(customer.status)} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Address" value={customer.address?.address ?? "—"} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Country Code" value={customer.address?.countryCode ?? "—"} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Postal Code" value={customer.address?.postalCode ?? "—"} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField label="Region" value={customer.address?.region ?? "—"} fullWidth size="small" disabled />
                                         </Grid2>
                                         <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField
@@ -449,7 +500,7 @@ export const CustomersView: React.FC = () => {
                 })}
                 {selectedTenantId && !loading && customers.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6}>
+                    <TableCell colSpan={7}>
                       <Typography variant="body2" color="text.secondary">
                         {debouncedSearch ? "No customers match this search." : "No customers available."}
                       </Typography>
