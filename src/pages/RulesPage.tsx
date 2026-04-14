@@ -30,6 +30,7 @@ import {
 import { apiBaseUrl } from "../config";
 import { useAuth } from "../auth/AuthContext";
 import { ProductPickerDrawer } from "../components/ProductPickerDrawer";
+import { TENANT_CONFIG_VALUE_QUERY } from "../modules/config/queries";
 import { useTenant } from "../modules/tenants/TenantContext";
 import {
   RULE_ATTRIBUTE_OPERATORS_QUERY,
@@ -41,6 +42,7 @@ import {
 import { RULES_BY_TENANT_PAGE_QUERY } from "../modules/rules/queries";
 
 type RuleType = "sku_quantity" | "spend" | "complex_rule";
+type ComplexAwardMode = "static" | "per_currency";
 
 type PointsRule = {
   id: string;
@@ -126,6 +128,9 @@ type ComplexRuleGroupPayload = {
   logic: "AND" | "OR";
   children: ComplexRuleNodePayload[];
 };
+type TenantConfigValueResult = {
+  tenantConfigValue?: string | null;
+};
 
 const makeId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const createCondition = (): ConditionRow => ({ id: makeId(), type: "condition" });
@@ -172,6 +177,9 @@ export const RulesPage: React.FC = () => {
   const [rewardPoints, setRewardPoints] = useState<number>(0);
   const [spendStep, setSpendStep] = useState<number>(0);
   const [pointsToGrant, setPointsToGrant] = useState<number>(0);
+  const [complexAwardMode, setComplexAwardMode] = useState<ComplexAwardMode>("static");
+  const [complexAwardPoints, setComplexAwardPoints] = useState<number>(1);
+  const [complexAwardCurrencyAmount, setComplexAwardCurrencyAmount] = useState<number>(1);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [complexProductPickerConditionId, setComplexProductPickerConditionId] = useState<string | null>(null);
   const [conditionTree, setConditionTree] = useState<ConditionGroup>(() => createGroup("AND"));
@@ -194,7 +202,14 @@ export const RulesPage: React.FC = () => {
     variables: { tenantId: selectedTenantId ?? null },
     skip: !selectedTenantId,
   });
+  const { data: tenantCurrencyData } = useQuery<TenantConfigValueResult>(TENANT_CONFIG_VALUE_QUERY, {
+    variables: { tenantId: selectedTenantId ?? "", configName: "currency" },
+    skip: !selectedTenantId,
+  });
   const ruleEntities: RuleEntity[] = ruleEntityData?.ruleEntities ?? [];
+  const tenantCurrencyCode = (tenantCurrencyData?.tenantConfigValue ?? "").trim().toUpperCase();
+  const currencyLabel = tenantCurrencyCode || "local currency";
+  const currencyAmountFieldLabel = tenantCurrencyCode ? `${tenantCurrencyCode} amount` : "Local currency amount";
   const { data: operatorCatalogData } = useQuery(RULE_OPERATOR_CATALOG_QUERY);
   const operatorCatalog: RuleOperatorInfo[] = operatorCatalogData?.ruleOperatorCatalog ?? [];
   const operatorLabelByValue = useMemo(() => {
@@ -209,10 +224,14 @@ export const RulesPage: React.FC = () => {
   }, [ruleEntities]);
 
   const isComplexRule = ruleType === "complex_rule";
+  const isStaticComplexAward = complexAwardMode === "static";
+  const complexStaticAwardValid = pointsToGrant > 0;
+  const complexPerCurrencyAwardValid = complexAwardPoints > 0 && complexAwardCurrencyAmount > 0;
+  const complexAwardConfigValid = isStaticComplexAward ? complexStaticAwardValid : complexPerCurrencyAwardValid;
   const isSkuQuantityRule = ruleType === "sku_quantity";
   const isSpendRule = ruleType === "spend";
   const effectiveSkus = useMemo(() => mergeSkuValues(skus, skuInputValue), [skus, skuInputValue]);
-  const complexDetailsValid = ruleName.trim().length > 0 && pointsToGrant > 0;
+  const complexDetailsValid = ruleName.trim().length > 0 && complexAwardConfigValid;
   const simpleRuleValid = isSkuQuantityRule
     ? effectiveSkus.length > 0 && quantityStep > 0 && rewardPoints > 0
     : isSpendRule
@@ -230,7 +249,13 @@ export const RulesPage: React.FC = () => {
     if (!selectedTenantId) return "Select a tenant first.";
     if (!ruleName.trim()) return "Campaign name is required.";
     if (!ruleType) return "Select a campaign type.";
-    if (isComplexRule && !complexDetailsValid) return "Points to grant must be greater than 0 for complex campaign.";
+    if (isComplexRule && !complexDetailsValid) {
+      if (!complexAwardConfigValid) {
+        return isStaticComplexAward
+          ? "Points to grant must be greater than 0 for complex campaign."
+          : "Both fields in the per-currency points setup must be greater than 0.";
+      }
+    }
     if (!isComplexRule && !simpleRuleValid) {
       if (isSkuQuantityRule) {
         if (effectiveSkus.length === 0) return "Add at least one SKU (press Enter or click outside the field to apply input).";
@@ -251,6 +276,8 @@ export const RulesPage: React.FC = () => {
     ruleType,
     isComplexRule,
     complexDetailsValid,
+    complexAwardConfigValid,
+    isStaticComplexAward,
     simpleRuleValid,
     isSkuQuantityRule,
     effectiveSkus.length,
@@ -287,6 +314,9 @@ export const RulesPage: React.FC = () => {
     setRewardPoints(0);
     setSpendStep(0);
     setPointsToGrant(0);
+    setComplexAwardMode("static");
+    setComplexAwardPoints(1);
+    setComplexAwardCurrencyAmount(1);
     setProductPickerOpen(false);
     setComplexProductPickerConditionId(null);
     setConditionTree(createGroup("AND"));
@@ -332,7 +362,10 @@ export const RulesPage: React.FC = () => {
           ruleType: "complex_rule",
           createdBy,
           active: false,
-          pointsToGrant,
+          awardMode: complexAwardMode,
+          pointsToGrant: isStaticComplexAward ? pointsToGrant : 0,
+          pointsPerCurrencyPoints: isStaticComplexAward ? null : complexAwardPoints,
+          pointsPerCurrencyAmount: isStaticComplexAward ? null : complexAwardCurrencyAmount,
           effectiveFrom: toIsoFromInput(effectiveFrom),
           effectiveTo: toIsoFromInput(effectiveTo),
           rootGroup,
@@ -1209,13 +1242,26 @@ export const RulesPage: React.FC = () => {
               </Select>
             </FormControl>
 
-            {ruleType && (
+            {isComplexRule && (
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700 }}>
-                  Rule builder
+                  Points award
                 </Typography>
-                {isComplexRule ? (
-                  <Stack spacing={2}>
+                <Stack spacing={2}>
+                  <FormControl fullWidth>
+                    <InputLabel id="complex-award-mode-label">Award mode</InputLabel>
+                    <Select
+                      labelId="complex-award-mode-label"
+                      value={complexAwardMode}
+                      label="Award mode"
+                      onChange={(e) => setComplexAwardMode(e.target.value as ComplexAwardMode)}
+                    >
+                      <MenuItem value="static">Static points amount</MenuItem>
+                      <MenuItem value="per_currency">Points per {currencyLabel}</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  {isStaticComplexAward ? (
                     <TextField
                       label="Points to grant"
                       type="number"
@@ -1223,7 +1269,43 @@ export const RulesPage: React.FC = () => {
                       onChange={(e) => setPointsToGrant(Number(e.target.value))}
                       fullWidth
                       inputProps={{ min: 0 }}
+                      helperText="Fixed amount awarded when campaign conditions are met."
                     />
+                  ) : (
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
+                      <TextField
+                        label="Points"
+                        type="number"
+                        value={complexAwardPoints || ""}
+                        onChange={(e) => setComplexAwardPoints(Number(e.target.value))}
+                        fullWidth
+                        inputProps={{ min: 0 }}
+                      />
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                        per
+                      </Typography>
+                      <TextField
+                        label={currencyAmountFieldLabel}
+                        type="number"
+                        value={complexAwardCurrencyAmount || ""}
+                        onChange={(e) => setComplexAwardCurrencyAmount(Number(e.target.value))}
+                        fullWidth
+                        inputProps={{ min: 0 }}
+                        helperText={`Example: 1 point per 1 ${currencyLabel}.`}
+                      />
+                    </Stack>
+                  )}
+                </Stack>
+              </Box>
+            )}
+
+            {ruleType && (
+              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700 }}>
+                  Rule builder
+                </Typography>
+                {isComplexRule ? (
+                  <Stack spacing={2}>
                     {selectedTenantId ? (
                       ruleEntities.length === 0 ? (
                         <Alert severity="info">No entities available yet. Create entities and attributes first.</Alert>
