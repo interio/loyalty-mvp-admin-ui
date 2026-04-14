@@ -279,7 +279,6 @@ export const InvoiceDetailsPage: React.FC = () => {
                       {appliedRules.map((rule: any, idx: number) => {
                         const ruleType = rule.ruleType ?? rule.RuleType ?? "rule";
                         const ruleName = rule.ruleName ?? rule.RuleName ?? "—";
-                        const ruleVersion = rule.ruleVersion ?? rule.RuleVersion ?? "?";
                         const pointsAwarded = rule.pointsAwarded ?? rule.PointsAwarded ?? 0;
                         const ruleId = rule.ruleId ?? rule.RuleId ?? "";
                         const details = describeRuleDetails(rule);
@@ -290,9 +289,6 @@ export const InvoiceDetailsPage: React.FC = () => {
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                               type: {ruleType}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                              version: v{ruleVersion}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                               points: {pointsAwarded}
