@@ -25,6 +25,7 @@ import { EntityAttributeEditPage } from "./pages/EntityAttributeEditPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { InvoiceDetailsPage } from "./pages/InvoiceDetailsPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ConfigPage } from "./pages/ConfigPage";
 import { theme } from "./theme";
 
 const App: React.FC = () => {
@@ -40,6 +41,7 @@ const App: React.FC = () => {
                 <Route element={<AppLayout />}>
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/tenants" element={<TenantsPage />} />
+                  <Route path="/config" element={<ConfigPage />} />
                   <Route path="/customers" element={<CustomersPage />} />
                   <Route path="/customers/:customerId/transactions" element={<CustomerTransactionsPage />} />
                   <Route path="/users" element={<UsersPage />} />

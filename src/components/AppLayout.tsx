@@ -25,6 +25,7 @@ import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import BusinessIcon from "@mui/icons-material/Business";
 import RedeemIcon from "@mui/icons-material/Redeem";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import MenuItem from "@mui/material/MenuItem";
@@ -38,6 +39,7 @@ const logoUrl = new URL("../assets/eazle_logo_transparent.png", import.meta.url)
 const navItems = [
   { label: "Dashboard", path: "/", icon: <DashboardCustomizeIcon /> },
   { label: "Tenants", path: "/tenants", icon: <BusinessIcon /> },
+  { label: "Config", path: "/config", icon: <SettingsSuggestIcon /> },
   { label: "Customers", path: "/customers", icon: <PeopleIcon /> },
   { label: "Product Catalog", path: "/products", icon: <StoreIcon /> },
   { label: "Distributors", path: "/distributors", icon: <LocalShippingIcon /> },
