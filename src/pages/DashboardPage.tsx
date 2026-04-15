@@ -51,7 +51,7 @@ export const DashboardPage: React.FC = () => {
           Dashboard
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Overview of customer, user, and order activity (stub data).
+          Overview of customer, user, and order activity.
         </Typography>
       </Box>
 

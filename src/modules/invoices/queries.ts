@@ -28,6 +28,17 @@ export const INVOICES_BY_TENANT_QUERY = gql`
   }
 `;
 
+export const INVOICE_ACTIVITY_BY_TENANT_QUERY = gql`
+  query InvoiceActivityByTenant($tenantId: UUID!, $take: Int!) {
+    invoicesByTenant(tenantId: $tenantId, take: $take) {
+      actorEmail
+      actorExternalId
+      occurredAt
+      receivedAt
+    }
+  }
+`;
+
 export const INVOICES_BY_TENANT_PAGE_QUERY = gql`
   query InvoicesByTenantPage($tenantId: UUID!, $page: Int!, $pageSize: Int!, $search: String) {
     invoicesByTenantPage(tenantId: $tenantId, page: $page, pageSize: $pageSize, search: $search) {
