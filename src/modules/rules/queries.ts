@@ -86,6 +86,7 @@ export const CAMPAIGN_RULES_BY_TENANT_QUERY = gql`
       ruleName
       startDate
       endDate
+      active
     }
   }
 `;

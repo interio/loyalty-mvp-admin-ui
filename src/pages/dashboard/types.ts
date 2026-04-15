@@ -5,6 +5,7 @@ export type CampaignRule = {
   ruleName: string;
   startDate: string;
   endDate?: string | null;
+  active?: boolean;
 };
 
 export type CampaignStatus = "past" | "active" | "future";
@@ -16,4 +17,5 @@ export type NormalizedCampaign = {
   endTs: number;
   hasExplicitEndDate: boolean;
   status: CampaignStatus;
+  isInactive: boolean;
 };

@@ -38,10 +38,10 @@ export const CampaignTimelineSection: React.FC<Props> = ({ campaigns, onRuleClic
       items.push({
         id: itemId,
         group: rowId,
-        title: campaign.ruleName,
+        title: campaign.isInactive ? `${campaign.ruleName} (Inactive)` : campaign.ruleName,
         start_time: campaign.startTs,
         end_time: campaign.endTs,
-        itemProps: { style: getCampaignStatusStyle(campaign.status) },
+        itemProps: { style: getCampaignStatusStyle(campaign.status, campaign.isInactive) },
       });
       ruleByItemId.set(itemId, campaign.id);
     });
@@ -102,7 +102,7 @@ export const CampaignTimelineSection: React.FC<Props> = ({ campaigns, onRuleClic
         Campaign Timeline
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Past, active, and future campaigns on a single timeline.
+        Past, active, future, and inactive campaigns on a single timeline.
       </Typography>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
         <Button size="small" variant="outlined" onClick={() => setTimelineMonthStart((prev) => prev.clone().subtract(1, "month"))}>

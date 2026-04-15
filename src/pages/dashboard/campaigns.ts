@@ -16,7 +16,19 @@ export const parseCampaignDate = (value?: string | null): number | null => {
   return null;
 };
 
-export const getCampaignStatusStyle = (status: CampaignStatus): CSSProperties => {
+export const getCampaignStatusStyle = (status: CampaignStatus, isInactive = false): CSSProperties => {
+  if (isInactive) {
+    return {
+      background: "repeating-linear-gradient(135deg, #EEF0ED 0px, #EEF0ED 10px, #D5D8D4 10px, #D5D8D4 20px)",
+      border: "1px solid #A5ABA4",
+      color: "#232824",
+      borderRadius: 6,
+      fontWeight: 700,
+      textShadow: "0 1px 0 rgba(255, 255, 255, 0.75)",
+      padding: "0 8px",
+    };
+  }
+
   if (status === "active") {
     return {
       background: "#008200",
@@ -53,6 +65,7 @@ export const normalizeCampaigns = (campaigns: CampaignRule[], referenceTs: numbe
   campaigns.forEach((campaign) => {
     const startTs = parseCampaignDate(campaign.startDate);
     if (startTs === null) return;
+    const isInactive = campaign.active === false;
 
     const parsedEndTs = parseCampaignDate(campaign.endDate);
     const hasExplicitEndDate = parsedEndTs !== null;
@@ -81,6 +94,7 @@ export const normalizeCampaigns = (campaigns: CampaignRule[], referenceTs: numbe
       endTs,
       hasExplicitEndDate,
       status,
+      isInactive,
     });
   });
 
