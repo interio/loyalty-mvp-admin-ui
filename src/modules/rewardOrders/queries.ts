@@ -27,6 +27,17 @@ export const REWARD_ORDERS_BY_TENANT_QUERY = gql`
   }
 `;
 
+export const REWARD_ORDERS_BY_TENANT_RANGE_QUERY = gql`
+  query RewardOrdersByTenantRange($tenantId: UUID!, $from: DateTime!, $to: DateTime!) {
+    rewardOrdersByTenantRange(tenantId: $tenantId, from: $from, to: $to) {
+      id
+      createdAt
+      totalPoints
+      status
+    }
+  }
+`;
+
 export const REWARD_ORDERS_BY_TENANT_PAGE_QUERY = gql`
   query RewardOrdersByTenantPage($tenantId: UUID!, $page: Int!, $pageSize: Int!) {
     rewardOrdersByTenantPage(tenantId: $tenantId, page: $page, pageSize: $pageSize) {
