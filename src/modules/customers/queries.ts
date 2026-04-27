@@ -13,6 +13,8 @@ export const CUSTOMERS_BY_TENANT_QUERY = gql`
       businessSegment
       onboardDate
       status
+      welcomeBonusAwarded
+      welcomeBonusAwardedAt
       address {
         address
         countryCode
@@ -53,6 +55,8 @@ export const CUSTOMERS_BY_TENANT_PAGE_QUERY = gql`
         businessSegment
         onboardDate
         status
+        welcomeBonusAwarded
+        welcomeBonusAwardedAt
         address {
           address
           countryCode
@@ -89,6 +93,8 @@ export const CUSTOMERS_BY_TENANT_SEARCH_QUERY = gql`
       businessSegment
       onboardDate
       status
+      welcomeBonusAwarded
+      welcomeBonusAwardedAt
       address {
         address
         countryCode
@@ -118,6 +124,8 @@ export const CUSTOMER_QUERY = gql`
       businessSegment
       onboardDate
       status
+      welcomeBonusAwarded
+      welcomeBonusAwardedAt
       address {
         address
         countryCode

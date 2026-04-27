@@ -131,7 +131,10 @@ export const RuleDetailsPage: React.FC = () => {
 
   const { data: flatData, loading: flatLoading, error: flatError } = useQuery(RULE_CONDITION_TREE_FLAT_QUERY, {
     variables: { ruleId: ruleId ?? "", tenantId: selectedTenantId ?? "" },
-    skip: !selectedTenantId || !ruleId || rule?.ruleType !== "complex_rule",
+    skip:
+      !selectedTenantId ||
+      !ruleId ||
+      (rule?.ruleType !== "complex_rule" && rule?.ruleType !== "welcome_bonus"),
     fetchPolicy: "network-only",
   });
   const flatTree: RuleConditionTreeFlat | null = flatData?.ruleConditionTreeFlat ?? null;
@@ -511,6 +514,19 @@ export const RuleDetailsPage: React.FC = () => {
                 {!flatLoading && !tree && <Alert severity="info">No condition tree found for this rule.</Alert>}
                 {!flatLoading && tree && renderConditionTree(tree)}
               </>
+            ) : rule.ruleType === "welcome_bonus" ? (
+              <Stack spacing={1.5}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  Points to grant: {getRewardPoints(rule)}
+                </Typography>
+                {flatLoading && <LinearProgress />}
+                {!flatLoading && flatTree && flatTree.conditions.filter((c) => c.entityCode !== "rule").length === 0 ? (
+                  <Alert severity="info">Applies to all new customers.</Alert>
+                ) : null}
+                {!flatLoading && tree && flatTree && flatTree.conditions.filter((c) => c.entityCode !== "rule").length > 0 ? (
+                  renderConditionTree(tree)
+                ) : null}
+              </Stack>
             ) : rule.ruleType === "sku_quantity" ? (
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <Box>

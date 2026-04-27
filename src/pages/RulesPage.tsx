@@ -41,8 +41,9 @@ import {
 } from "../modules/entities/queries";
 import { RULES_BY_TENANT_PAGE_QUERY } from "../modules/rules/queries";
 
-type RuleType = "sku_quantity" | "spend" | "complex_rule";
+type RuleType = "sku_quantity" | "spend" | "complex_rule" | "welcome_bonus";
 type ComplexAwardMode = "static" | "per_currency";
+type WelcomeApplyMode = "all" | "conditions";
 
 type PointsRule = {
   id: string;
@@ -140,6 +141,12 @@ const createGroup = (operator: "AND" | "OR" = "AND"): ConditionGroup => ({
   operator,
   children: [createCondition()],
 });
+const createWelcomeGroup = (customerEntityId?: string, operator: "AND" | "OR" = "AND"): ConditionGroup => ({
+  id: makeId(),
+  type: "group",
+  operator,
+  children: [{ ...createCondition(), entityId: customerEntityId }],
+});
 const sanitizeSkuValues = (values: string[]) => {
   const seen = new Set<string>();
   const normalized: string[] = [];
@@ -180,6 +187,7 @@ export const RulesPage: React.FC = () => {
   const [complexAwardMode, setComplexAwardMode] = useState<ComplexAwardMode>("static");
   const [complexAwardPoints, setComplexAwardPoints] = useState<number>(1);
   const [complexAwardCurrencyAmount, setComplexAwardCurrencyAmount] = useState<number>(1);
+  const [welcomeApplyMode, setWelcomeApplyMode] = useState<WelcomeApplyMode>("all");
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [complexProductPickerConditionId, setComplexProductPickerConditionId] = useState<string | null>(null);
   const [conditionTree, setConditionTree] = useState<ConditionGroup>(() => createGroup("AND"));
@@ -222,16 +230,35 @@ export const RulesPage: React.FC = () => {
     ruleEntities.forEach((entity) => map.set(entity.id, entity));
     return map;
   }, [ruleEntities]);
-
   const isComplexRule = ruleType === "complex_rule";
+  const isWelcomeBonusRule = ruleType === "welcome_bonus";
+  const usesConditionBuilder = isComplexRule || isWelcomeBonusRule;
+  const customerEntity = useMemo(
+    () => ruleEntities.find((entity) => entity.code === "customer"),
+    [ruleEntities],
+  );
+  const availableRuleEntities = useMemo(
+    () => (isWelcomeBonusRule ? (customerEntity ? [customerEntity] : []) : ruleEntities),
+    [isWelcomeBonusRule, customerEntity, ruleEntities],
+  );
   const isStaticComplexAward = complexAwardMode === "static";
   const complexStaticAwardValid = pointsToGrant > 0;
   const complexPerCurrencyAwardValid = complexAwardPoints > 0 && complexAwardCurrencyAmount > 0;
   const complexAwardConfigValid = isStaticComplexAward ? complexStaticAwardValid : complexPerCurrencyAwardValid;
+  const welcomeAwardConfigValid = pointsToGrant > 0;
   const isSkuQuantityRule = ruleType === "sku_quantity";
   const isSpendRule = ruleType === "spend";
   const effectiveSkus = useMemo(() => mergeSkuValues(skus, skuInputValue), [skus, skuInputValue]);
   const complexDetailsValid = ruleName.trim().length > 0 && complexAwardConfigValid;
+  const welcomeHasCondition = useMemo(() => {
+    const hasCondition = (node: ConditionNode): boolean => {
+      if (node.type === "condition") return true;
+      return node.children.some((child) => hasCondition(child));
+    };
+    return hasCondition(conditionTree);
+  }, [conditionTree]);
+  const welcomeConditionsValid = welcomeApplyMode === "all" || welcomeHasCondition;
+  const welcomeDetailsValid = ruleName.trim().length > 0 && welcomeAwardConfigValid && welcomeConditionsValid;
   const simpleRuleValid = isSkuQuantityRule
     ? effectiveSkus.length > 0 && quantityStep > 0 && rewardPoints > 0
     : isSpendRule
@@ -243,7 +270,8 @@ export const RulesPage: React.FC = () => {
     !ruleType ||
     loading ||
     (isComplexRule && !complexDetailsValid) ||
-    (!isComplexRule && !simpleRuleValid);
+    (isWelcomeBonusRule && !welcomeDetailsValid) ||
+    (!usesConditionBuilder && !simpleRuleValid);
   const validationHint = useMemo(() => {
     if (loading) return null;
     if (!selectedTenantId) return "Select a tenant first.";
@@ -256,7 +284,13 @@ export const RulesPage: React.FC = () => {
           : "Both fields in the per-currency points setup must be greater than 0.";
       }
     }
-    if (!isComplexRule && !simpleRuleValid) {
+    if (isWelcomeBonusRule && !welcomeDetailsValid) {
+      if (!welcomeConditionsValid) {
+        return "Add at least one customer condition or switch to Apply to all new customers.";
+      }
+      return "Points to grant must be greater than 0 for welcome bonus.";
+    }
+    if (!usesConditionBuilder && !simpleRuleValid) {
       if (isSkuQuantityRule) {
         if (effectiveSkus.length === 0) return "Add at least one SKU (press Enter or click outside the field to apply input).";
         if (quantityStep <= 0) return "Quantity step must be greater than 0.";
@@ -275,9 +309,14 @@ export const RulesPage: React.FC = () => {
     ruleName,
     ruleType,
     isComplexRule,
+    isWelcomeBonusRule,
+    usesConditionBuilder,
     complexDetailsValid,
     complexAwardConfigValid,
+    welcomeDetailsValid,
     isStaticComplexAward,
+    welcomeApplyMode,
+    welcomeConditionsValid,
     simpleRuleValid,
     isSkuQuantityRule,
     effectiveSkus.length,
@@ -317,6 +356,7 @@ export const RulesPage: React.FC = () => {
     setComplexAwardMode("static");
     setComplexAwardPoints(1);
     setComplexAwardCurrencyAmount(1);
+    setWelcomeApplyMode("all");
     setProductPickerOpen(false);
     setComplexProductPickerConditionId(null);
     setConditionTree(createGroup("AND"));
@@ -345,13 +385,25 @@ export const RulesPage: React.FC = () => {
     }
   }, [pageInfo, page]);
 
+  useEffect(() => {
+    if (!isWelcomeBonusRule) return;
+    if (welcomeApplyMode !== "conditions") return;
+    if (!customerEntity?.id) return;
+
+    setConditionTree((prev) => normalizeWelcomeConditionTree(prev, customerEntity.id) as ConditionGroup);
+    void loadAttributesForEntity(customerEntity.code);
+  }, [isWelcomeBonusRule, welcomeApplyMode, customerEntity?.id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTenantId) return;
     setMessage(null);
     setError(null);
-    if (ruleType === "complex_rule") {
-      const rootGroup = buildComplexPayload();
+    if (isComplexRule || isWelcomeBonusRule) {
+      const rootGroup =
+        isWelcomeBonusRule && welcomeApplyMode === "all"
+          ? ({ logic: "AND", children: [] } as ComplexRuleGroupPayload)
+          : buildComplexPayload();
       if (!rootGroup) return;
       setLoading(true);
       try {
@@ -359,13 +411,17 @@ export const RulesPage: React.FC = () => {
           tenantId: selectedTenantId,
           name: ruleName.trim(),
           description: shortDescription.trim() || null,
-          ruleType: "complex_rule",
+          ruleType: isWelcomeBonusRule ? "welcome_bonus" : "complex_rule",
           createdBy,
           active: false,
-          awardMode: complexAwardMode,
-          pointsToGrant: isStaticComplexAward ? pointsToGrant : 0,
-          pointsPerCurrencyPoints: isStaticComplexAward ? null : complexAwardPoints,
-          pointsPerCurrencyAmount: isStaticComplexAward ? null : complexAwardCurrencyAmount,
+          awardMode: isWelcomeBonusRule ? "static" : complexAwardMode,
+          pointsToGrant: isWelcomeBonusRule
+            ? pointsToGrant
+            : isStaticComplexAward
+              ? pointsToGrant
+              : 0,
+          pointsPerCurrencyPoints: isWelcomeBonusRule || isStaticComplexAward ? null : complexAwardPoints,
+          pointsPerCurrencyAmount: isWelcomeBonusRule || isStaticComplexAward ? null : complexAwardCurrencyAmount,
           effectiveFrom: toIsoFromInput(effectiveFrom),
           effectiveTo: toIsoFromInput(effectiveTo),
           rootGroup,
@@ -579,6 +635,26 @@ export const RulesPage: React.FC = () => {
     return getAttributesForEntity(entityId).find((attr) => attr.id === attributeId);
   };
 
+  const normalizeWelcomeConditionTree = (node: ConditionNode, customerEntityId: string): ConditionNode => {
+    if (node.type === "group") {
+      const nextChildren = node.children.map((child) => normalizeWelcomeConditionTree(child, customerEntityId));
+      return {
+        ...node,
+        children: nextChildren.length > 0 ? nextChildren : [{ ...createCondition(), entityId: customerEntityId }],
+      };
+    }
+
+    const shouldReset = node.entityId !== customerEntityId;
+    return {
+      ...node,
+      entityId: customerEntityId,
+      attributeId: shouldReset ? undefined : node.attributeId,
+      operator: shouldReset ? undefined : node.operator,
+      value: shouldReset ? "" : node.value,
+      values: shouldReset ? [] : node.values,
+    };
+  };
+
   const usesMultiValueInput = (condition: ConditionRow, attribute: RuleAttribute) =>
     attribute.isMultiValue || attribute.uiControl === "multiselect" || condition.operator === "in" || condition.operator === "nin";
 
@@ -636,13 +712,14 @@ export const RulesPage: React.FC = () => {
         };
       }
 
-      if (!node.entityId || !node.attributeId || !node.operator) {
+      const entityId = isWelcomeBonusRule ? (customerEntity?.id ?? node.entityId) : node.entityId;
+      if (!entityId || !node.attributeId || !node.operator) {
         errors.push("All conditions must include entity, attribute, and operator.");
         return null;
       }
 
-      const entity = entityById.get(node.entityId);
-      const attribute = getAttributeById(node.entityId, node.attributeId);
+      const entity = entityById.get(entityId);
+      const attribute = getAttributeById(entityId, node.attributeId);
       if (!entity || !attribute) {
         errors.push("Selected entity or attribute is not available.");
         return null;
@@ -671,7 +748,8 @@ export const RulesPage: React.FC = () => {
 
     const rootPayload = buildNode(conditionTree);
     if (!rootPayload || rootPayload.type !== "group") {
-      errors.push("Root group is missing.");
+      setError("Root group is missing.");
+      return null;
     }
 
     if (errors.length > 0) {
@@ -681,11 +759,15 @@ export const RulesPage: React.FC = () => {
 
     return {
       logic: conditionTree.operator,
-      children: rootPayload.type === "group" ? rootPayload.children ?? [] : [],
+      children: rootPayload.children ?? [],
     };
   };
 
-  const updateNode = (node: ConditionNode, targetId: string, updater: (node: ConditionNode) => ConditionNode) => {
+  const updateNode = (
+    node: ConditionNode,
+    targetId: string,
+    updater: (node: ConditionNode) => ConditionNode,
+  ): ConditionNode => {
     if (node.id === targetId) return updater(node);
     if (node.type === "group") {
       return {
@@ -710,17 +792,23 @@ export const RulesPage: React.FC = () => {
   };
 
   const addCondition = (groupId: string) => {
+    const defaultCondition = isWelcomeBonusRule
+      ? { ...createCondition(), entityId: customerEntity?.id }
+      : createCondition();
     setConditionTree((prev) =>
       updateNode(prev, groupId, (node) =>
-        node.type === "group" ? { ...node, children: [...node.children, createCondition()] } : node,
+        node.type === "group" ? { ...node, children: [...node.children, defaultCondition] } : node,
       ) as ConditionGroup,
     );
   };
 
   const addGroup = (groupId: string, operator: "AND" | "OR") => {
+    const newGroup = isWelcomeBonusRule
+      ? createWelcomeGroup(customerEntity?.id, operator)
+      : createGroup(operator);
     setConditionTree((prev) =>
       updateNode(prev, groupId, (node) =>
-        node.type === "group" ? { ...node, children: [...node.children, createGroup(operator)] } : node,
+        node.type === "group" ? { ...node, children: [...node.children, newGroup] } : node,
       ) as ConditionGroup,
     );
   };
@@ -958,8 +1046,10 @@ export const RulesPage: React.FC = () => {
   };
 
   const renderConditionRow = (condition: ConditionRow, depth: number) => {
-    const attributes = getAttributesForEntity(condition.entityId);
-    const attribute = getAttributeById(condition.entityId, condition.attributeId);
+    const lockedEntityId = isWelcomeBonusRule ? customerEntity?.id : undefined;
+    const selectedEntityId = lockedEntityId ?? condition.entityId;
+    const attributes = getAttributesForEntity(selectedEntityId);
+    const attribute = getAttributeById(selectedEntityId, condition.attributeId);
     const operatorOptions = condition.attributeId
       ? operatorsByAttribute[condition.attributeId] ?? []
       : [];
@@ -975,7 +1065,8 @@ export const RulesPage: React.FC = () => {
           <Select
             labelId={`entity-${condition.id}`}
             label="Entity"
-            value={condition.entityId ?? ""}
+            value={selectedEntityId ?? ""}
+            disabled={Boolean(lockedEntityId)}
             onChange={(e) => {
               const entityId = String(e.target.value);
               const entity = entityById.get(entityId);
@@ -991,7 +1082,7 @@ export const RulesPage: React.FC = () => {
               }
             }}
           >
-            {ruleEntities.map((entity) => (
+            {availableRuleEntities.map((entity) => (
               <MenuItem key={entity.id} value={entity.id}>
                 {entity.displayName}
               </MenuItem>
@@ -1001,7 +1092,7 @@ export const RulesPage: React.FC = () => {
 
         <FormControl
           fullWidth
-          disabled={!condition.entityId}
+          disabled={!selectedEntityId}
           sx={{ flex: { xs: "1 1 100%", md: "1 1 0" }, minWidth: 180 }}
         >
           <InputLabel id={`attribute-${condition.id}`}>Attribute</InputLabel>
@@ -1023,7 +1114,7 @@ export const RulesPage: React.FC = () => {
               }
             }}
           >
-            {attributes.length === 0 && condition.entityId && (
+            {attributes.length === 0 && selectedEntityId && (
               <MenuItem value="" disabled>
                 No attributes available
               </MenuItem>
@@ -1234,34 +1325,45 @@ export const RulesPage: React.FC = () => {
                 labelId="rule-type-label"
                 value={ruleType}
                 label="Campaign type"
-                onChange={(e) => setRuleType(e.target.value as RuleType)}
+                onChange={(e) => {
+                  const nextType = e.target.value as RuleType;
+                  setRuleType(nextType);
+                  if (nextType !== "welcome_bonus") {
+                    setWelcomeApplyMode("all");
+                  } else if (customerEntity?.id) {
+                    setConditionTree(createWelcomeGroup(customerEntity.id));
+                  }
+                }}
               >
                 <MenuItem value="spend">Spend X get Y points</MenuItem>
                 <MenuItem value="sku_quantity">SKU quantity campaign</MenuItem>
                 <MenuItem value="complex_rule">Complex campaign</MenuItem>
+                <MenuItem value="welcome_bonus">Welcome bonus</MenuItem>
               </Select>
             </FormControl>
 
-            {isComplexRule && (
+            {usesConditionBuilder && (
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700 }}>
                   Points award
                 </Typography>
                 <Stack spacing={2}>
-                  <FormControl fullWidth>
-                    <InputLabel id="complex-award-mode-label">Award mode</InputLabel>
-                    <Select
-                      labelId="complex-award-mode-label"
-                      value={complexAwardMode}
-                      label="Award mode"
-                      onChange={(e) => setComplexAwardMode(e.target.value as ComplexAwardMode)}
-                    >
-                      <MenuItem value="static">Static points amount</MenuItem>
-                      <MenuItem value="per_currency">Points per {currencyLabel}</MenuItem>
-                    </Select>
-                  </FormControl>
+                  {!isWelcomeBonusRule && (
+                    <FormControl fullWidth>
+                      <InputLabel id="complex-award-mode-label">Award mode</InputLabel>
+                      <Select
+                        labelId="complex-award-mode-label"
+                        value={complexAwardMode}
+                        label="Award mode"
+                        onChange={(e) => setComplexAwardMode(e.target.value as ComplexAwardMode)}
+                      >
+                        <MenuItem value="static">Static points amount</MenuItem>
+                        <MenuItem value="per_currency">Points per {currencyLabel}</MenuItem>
+                      </Select>
+                    </FormControl>
+                  )}
 
-                  {isStaticComplexAward ? (
+                  {isWelcomeBonusRule || isStaticComplexAward ? (
                     <TextField
                       label="Points to grant"
                       type="number"
@@ -1269,7 +1371,11 @@ export const RulesPage: React.FC = () => {
                       onChange={(e) => setPointsToGrant(Number(e.target.value))}
                       fullWidth
                       inputProps={{ min: 0 }}
-                      helperText="Fixed amount awarded when campaign conditions are met."
+                      helperText={
+                        isWelcomeBonusRule
+                          ? "Fixed amount awarded once when welcome bonus campaign conditions are met."
+                          : "Fixed amount awarded when campaign conditions are met."
+                      }
                     />
                   ) : (
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }}>
@@ -1295,6 +1401,21 @@ export const RulesPage: React.FC = () => {
                       />
                     </Stack>
                   )}
+
+                  {isWelcomeBonusRule && (
+                    <FormControl fullWidth>
+                      <InputLabel id="welcome-apply-mode-label">Apply mode</InputLabel>
+                      <Select
+                        labelId="welcome-apply-mode-label"
+                        value={welcomeApplyMode}
+                        label="Apply mode"
+                        onChange={(e) => setWelcomeApplyMode(e.target.value as WelcomeApplyMode)}
+                      >
+                        <MenuItem value="all">Apply to all new customers</MenuItem>
+                        <MenuItem value="conditions">Apply to matching customer attributes</MenuItem>
+                      </Select>
+                    </FormControl>
+                  )}
                 </Stack>
               </Box>
             )}
@@ -1304,11 +1425,15 @@ export const RulesPage: React.FC = () => {
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700 }}>
                   Rule builder
                 </Typography>
-                {isComplexRule ? (
+                {usesConditionBuilder ? (
                   <Stack spacing={2}>
                     {selectedTenantId ? (
-                      ruleEntities.length === 0 ? (
+                      availableRuleEntities.length === 0 ? (
                         <Alert severity="info">No entities available yet. Create entities and attributes first.</Alert>
+                      ) : isWelcomeBonusRule && welcomeApplyMode === "all" ? (
+                        <Alert severity="info">
+                          Welcome bonus will be awarded to all new customers for this tenant.
+                        </Alert>
                       ) : (
                         <Box>{renderGroup(conditionTree, 0, true)}</Box>
                       )

@@ -34,7 +34,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import { DetailSection } from "../../components/DetailSection";
 import { CUSTOMERS_BY_TENANT_PAGE_QUERY, UPDATE_CUSTOMER_TIER_MUTATION } from "./queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../users/queries";
-import { MANUAL_ADJUST_POINTS_MUTATION } from "../ledger/queries";
+import { AWARD_WELCOME_BONUS_MUTATION, MANUAL_ADJUST_POINTS_MUTATION } from "../ledger/queries";
 import { useTenant } from "../tenants/TenantContext";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useAuth } from "../../auth/AuthContext";
@@ -57,6 +57,8 @@ type Customer = {
   businessSegment?: string;
   onboardDate?: string;
   status?: number;
+  welcomeBonusAwarded?: boolean;
+  welcomeBonusAwardedAt?: string;
   address?: CustomerAddress | null;
   tenantId: string;
   createdAt?: string;
@@ -105,6 +107,7 @@ export const CustomersView: React.FC = () => {
     notifyOnNetworkStatusChange: true });
   const [loadUsers] = useLazyQuery(USERS_BY_CUSTOMER_QUERY);
   const [manualAdjustPoints, { loading: adjusting }] = useMutation(MANUAL_ADJUST_POINTS_MUTATION);
+  const [awardWelcomeBonus, { loading: awardingWelcome }] = useMutation(AWARD_WELCOME_BONUS_MUTATION);
   const [updateCustomerTier] = useMutation(UPDATE_CUSTOMER_TIER_MUTATION);
 
   const customers: Customer[] = data?.customersByTenantPage?.nodes ?? [];
@@ -192,6 +195,11 @@ export const CustomersView: React.FC = () => {
     setAdjustOpen(true);
   };
 
+  const selectedAdjustCustomer = useMemo(
+    () => customers.find((item) => item.id === adjustCustomerId) ?? null,
+    [customers, adjustCustomerId],
+  );
+
   const submitAdjustment = async () => {
     if (!adjustCustomerId) return;
     const amountValue = Number(adjustAmount);
@@ -216,6 +224,32 @@ export const CustomersView: React.FC = () => {
           pageSize,
           search: debouncedSearch || null });
       }
+      setAdjustOpen(false);
+    } catch (err) {
+      setAdjustError((err as Error).message);
+    }
+  };
+
+  const submitWelcomeBonus = async () => {
+    if (!selectedTenantId || !adjustCustomerId) return;
+    setAdjustError(null);
+    try {
+      await awardWelcomeBonus({
+        variables: {
+          input: {
+            customerId: adjustCustomerId,
+            tenantId: selectedTenantId,
+            actorEmail: user?.email ?? null,
+            requireOnboardDateReached: false,
+          },
+        },
+      });
+      await refetch({
+        tenantId: selectedTenantId,
+        page,
+        pageSize,
+        search: debouncedSearch || null,
+      });
       setAdjustOpen(false);
     } catch (err) {
       setAdjustError((err as Error).message);
@@ -370,6 +404,24 @@ export const CustomersView: React.FC = () => {
                                         </Grid2>
                                         <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField label="Status" value={formatCustomerStatus(customer.status)} fullWidth size="small" disabled />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField
+                                            label="Welcome Bonus"
+                                            value={customer.welcomeBonusAwarded ? "Awarded" : "Not awarded"}
+                                            fullWidth
+                                            size="small"
+                                            disabled
+                                          />
+                                        </Grid2>
+                                        <Grid2 size={{ xs: 12, sm: 6 }}>
+                                          <TextField
+                                            label="Welcome Bonus Awarded At"
+                                            value={formatDate(customer.welcomeBonusAwardedAt)}
+                                            fullWidth
+                                            size="small"
+                                            disabled
+                                          />
                                         </Grid2>
                                         <Grid2 size={{ xs: 12, sm: 6 }}>
                                           <TextField label="Address" value={customer.address?.address ?? "—"} fullWidth size="small" disabled />
@@ -548,10 +600,22 @@ export const CustomersView: React.FC = () => {
               minRows={3}
             />
             {adjustError && <Alert severity="error">{adjustError}</Alert>}
+            <Alert severity={selectedAdjustCustomer?.welcomeBonusAwarded ? "success" : "info"}>
+              {selectedAdjustCustomer?.welcomeBonusAwarded
+                ? "Welcome bonus has already been awarded for this customer."
+                : "You can award welcome bonus once. This action will also mark the customer as awarded."}
+            </Alert>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setAdjustOpen(false)}>Cancel</Button>
+          <Button
+            variant="outlined"
+            onClick={submitWelcomeBonus}
+            disabled={awardingWelcome || !!selectedAdjustCustomer?.welcomeBonusAwarded}
+          >
+            {awardingWelcome ? "Awarding..." : "Award welcome bonus"}
+          </Button>
           <Button variant="contained" onClick={submitAdjustment} disabled={adjusting}>
             {adjusting ? "Saving..." : "Apply"}
           </Button>

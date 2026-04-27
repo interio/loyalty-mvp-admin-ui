@@ -38,3 +38,16 @@ export const MANUAL_ADJUST_POINTS_MUTATION = gql`
     }
   }
 `;
+
+export const AWARD_WELCOME_BONUS_MUTATION = gql`
+  mutation AwardWelcomeBonus($input: AwardWelcomeBonusInput!) {
+    awardWelcomeBonus(input: $input) {
+      customerId
+      awarded
+      pointsAwarded
+      currentBalance
+      outcome
+      awardedAt
+    }
+  }
+`;

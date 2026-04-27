@@ -27,7 +27,11 @@ import { DetailSection } from "../components/DetailSection";
 import { useAuth } from "../auth/AuthContext";
 import { useTenant } from "../modules/tenants/TenantContext";
 import { CUSTOMER_QUERY } from "../modules/customers/queries";
-import { CUSTOMER_TRANSACTIONS_QUERY, MANUAL_ADJUST_POINTS_MUTATION } from "../modules/ledger/queries";
+import {
+  AWARD_WELCOME_BONUS_MUTATION,
+  CUSTOMER_TRANSACTIONS_QUERY,
+  MANUAL_ADJUST_POINTS_MUTATION,
+} from "../modules/ledger/queries";
 import { USERS_BY_CUSTOMER_QUERY } from "../modules/users/queries";
 
 type Transaction = {
@@ -74,6 +78,7 @@ export const CustomerTransactionsPage: React.FC = () => {
   });
   const transactions: Transaction[] = txData?.customerTransactions ?? [];
   const [manualAdjustPoints, { loading: adjusting }] = useMutation(MANUAL_ADJUST_POINTS_MUTATION);
+  const [awardWelcomeBonus, { loading: awardingWelcome }] = useMutation(AWARD_WELCOME_BONUS_MUTATION);
 
   const selectedTenantName = useMemo(
     () => tenants.find((t) => t.id === selectedTenantId)?.name,
@@ -175,6 +180,27 @@ export const CustomerTransactionsPage: React.FC = () => {
     }
   };
 
+  const submitWelcomeBonus = async () => {
+    if (!customerId || !selectedTenantId) return;
+    setAdjustError(null);
+    try {
+      await awardWelcomeBonus({
+        variables: {
+          input: {
+            customerId,
+            tenantId: selectedTenantId,
+            actorEmail: user?.email ?? null,
+            requireOnboardDateReached: false,
+          },
+        },
+      });
+      await Promise.all([refetchCustomer(), refetchTransactions()]);
+      setAdjustOpen(false);
+    } catch (err) {
+      setAdjustError((err as Error).message);
+    }
+  };
+
   return (
     <Card>
       <CardHeader
@@ -216,6 +242,9 @@ export const CustomerTransactionsPage: React.FC = () => {
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                   Balance: {customer.pointsAccount?.balance ?? 0} • Updated: {formatDate(customer.pointsAccount?.updatedAt)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  Welcome bonus: {customer.welcomeBonusAwarded ? "Awarded" : "Not awarded"}
                 </Typography>
                 <Box>
                   <Button
@@ -335,9 +364,21 @@ export const CustomerTransactionsPage: React.FC = () => {
               {adjustError}
             </Alert>
           )}
+          <Alert severity={customer?.welcomeBonusAwarded ? "success" : "info"}>
+            {customer?.welcomeBonusAwarded
+              ? "Welcome bonus has already been awarded for this customer."
+              : "Use this action to grant welcome bonus once and mark customer as awarded."}
+          </Alert>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAdjustOpen(false)}>Cancel</Button>
+          <Button
+            variant="outlined"
+            onClick={submitWelcomeBonus}
+            disabled={awardingWelcome || !!customer?.welcomeBonusAwarded}
+          >
+            {awardingWelcome ? "Awarding..." : "Award welcome bonus"}
+          </Button>
           <Button variant="contained" onClick={submitAdjustment} disabled={adjusting}>
             {adjusting ? "Saving..." : "Apply"}
           </Button>

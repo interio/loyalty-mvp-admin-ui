@@ -36,6 +36,9 @@ If your backend runs on host `localhost:5137` (outside Docker), use `host.docker
 
 ## Stack
 - React + TypeScript + Vite + React Router.
+- Rendering model: Single-Page Application (SPA) with client-side rendering.
+- No server-side rendering (SSR).
+- Deployment note: configure a fallback rewrite to `/index.html` for deep links.
 - MUI with Heineken-inspired palette.
 - Apollo Client defaults to `/graphql` (same-origin/proxy friendly); optional override via `VITE_GRAPHQL_URL`.
 - REST calls use `VITE_API_URL` (fallback: current origin in non-localhost, otherwise `http://localhost:8080`).
